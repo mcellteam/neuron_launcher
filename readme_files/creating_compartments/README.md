@@ -39,13 +39,13 @@ A further tool is included to convert the output of the compartmentalization fro
 
 Start by selecting both of the output objects from either of the two compartmentize methods described above, i.e. the "_Segment" object which contains the dividing planes between compartments, and the "_Surface" object which contains the surface regions.
 
-![Prepare to make compartments](../figures/creating_compartments_6.jpg?raw=true "Prepare to make compartments")
+![Prepare to make compartments](../figures/creating_compartments_7.jpg?raw=true "Prepare to make compartments")
 
 The "Convert Regions to Compartments" will generate separate objects for each compartment. These may either be segment compartments, or just the larger section compartments, depending on what is defined in the surface and segment object regions.
 
 The output is shown below, with several of the compartments hidden for illustration, and one selected.
 
-![Output Compartments](../figures/creating_compartments_7.jpg?raw=true "Output Compartments")
+![Output Compartments](../figures/creating_compartments_8.jpg?raw=true "Output Compartments")
 
 
 
