@@ -22,7 +22,8 @@ The tools included in this add-on are designed to create models for hybrid MCell
 * **[Closing an open mesh](readme_files/closing_mesh)**
 * **[Assigning surface regions](readme_files/assigning_surface_regions)**
 * **[Create volumetric compartments from the surface mesh](readme_files/creating_compartments)**
-* **[Visualising exploding sections](readme_files/visualising_exploding_sections)**
+* **[Visualising exploding sections](readme_files/exploding_sections)**
+* **[Visualising Materials and Colors](readme_files/visualising)**
 * **[Source file list](readme_files/source_file_list)**
 
 ![Example](readme_files/figures/example.jpg?raw=true "Example")

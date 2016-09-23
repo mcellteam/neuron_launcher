@@ -1,1 +1,0 @@
-# Closing an open mesh

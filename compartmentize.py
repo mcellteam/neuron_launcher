@@ -402,7 +402,7 @@ class NM_plane:
         # Overwrite existing object
         obj_old = bpy.data.objects.get(self.name)
         if obj_old:
-            context.scene.objects.unlink(obj_old)
+            bpy.context.scene.objects.unlink(obj_old)
             bpy.data.objects.remove(obj_old)
             
         # New one
@@ -413,7 +413,7 @@ class NM_plane:
         print("> > Number of faces in new obj: " + str(len(obj_new.data.polygons)))
 
         # Link
-        context.scene.objects.link(obj_new)
+        bpy.context.scene.objects.link(obj_new)
 
         return obj_new
 
@@ -933,7 +933,7 @@ def new_obj_meshpy(obj_name, mesh_built):
     obj_new = bpy.data.objects.new(obj_name,mesh_new)
 
     # Something
-    scene = context.scene
+    scene = bpy.context.scene
     scene.objects.link(obj_new)
 
 # Main
