@@ -50,6 +50,7 @@ if "bpy" in locals():
     imp.reload(compartmentize)
     imp.reload(compartmentize_sc_only)
     imp.reload(explode)
+    imp.reload(regions_to_compartments)
 
 else:
     print("Importing Neuron Launcher")
@@ -63,6 +64,7 @@ else:
     from . import compartmentize
     from . import compartmentize_sc_only
     from . import explode
+    from . import regions_to_compartments
 
 # General import
 import bpy

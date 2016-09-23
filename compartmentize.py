@@ -23,45 +23,45 @@ import time
 
 # Function to write out to a file the number of segments in each section
 def write_nseg_sec(fname):
-    global nm_section_dict
+    global mn_section_dict
 
     f = open(fname,'w')
     
     # Go through all sections
-    ids = list(nm_section_dict.keys())
+    ids = list(mn_section_dict.keys())
     n = len(ids)
     for i,sec_id in enumerate(ids):
         
         # Write the number of segments
-        f.write(str(sec_id[0]) + " " + str(sec_id[1]) + " " + str(nm_section_dict[sec_id].n_seg))
+        f.write(str(sec_id[0]) + " " + str(sec_id[1]) + " " + str(mn_section_dict[sec_id].n_seg))
         if i != n-1:
             f.write("\n")
     
     f.close()
 
 # Function to write region names (surfaces and segments)
-def write_nm_region_names_areas(fname):
-    global nm_segment_dict
+def write_mn_region_names_areas(fname, ob_name):
+    global mn_segment_dict
 
     f = open(fname,'w')
     
     # Write surface planes
-    f.write('NM_Surface\n')
-    n = len(list(nm_segment_dict.keys()))
+    f.write(ob_name+'_surface\n')
+    n = len(list(mn_segment_dict.keys()))
     names_done = []
-    for i_seg,seg_id in enumerate(list(nm_segment_dict.keys())):
-        seg = nm_segment_dict[seg_id]
+    for i_seg,seg_id in enumerate(list(mn_segment_dict.keys())):
+        seg = mn_segment_dict[seg_id]
         if seg.plane_surf != -1: # segment has no plane facing the surface
             if not seg.plane_surf.name in names_done:
                 f.write(seg.plane_surf.name + " " + str(seg.plane_surf.surf_area()) + "\n")
                 names_done.append(seg.plane_surf.name)
         
     # Write segment planes
-    f.write('NM_Segment\n')
-    n = len(list(nm_segment_dict.keys()))
+    f.write(ob_name+'_segment\n')
+    n = len(list(mn_segment_dict.keys()))
     names_done = []
-    for i_seg,seg_id in enumerate(list(nm_segment_dict.keys())):
-        seg = nm_segment_dict[seg_id]
+    for i_seg,seg_id in enumerate(list(mn_segment_dict.keys())):
+        seg = mn_segment_dict[seg_id]
 
         m = len(seg.planes_sg)
         for i_plane,plane_sg in enumerate(seg.planes_sg):
@@ -76,9 +76,9 @@ def write_nm_region_names_areas(fname):
 
     f.close()
 
-# Function to make a tetgen mesh from the global nm_section list
+# Function to make a tetgen mesh from the global mn_section list
 def make_tetgen_mesh():
-    global nm_section_dict
+    global mn_section_dict
     global face_marker_plane_dict
 
     # Make single volume
@@ -93,8 +93,8 @@ def make_tetgen_mesh():
     plane_sides_ids_done = {}
 
     # Go through all the sections
-    for sec_id in nm_section_dict.keys():
-        sec = nm_section_dict[sec_id]
+    for sec_id in mn_section_dict.keys():
+        sec = mn_section_dict[sec_id]
 
         # Check that there are any borders
         if len(sec.planes_sc_brdrs[0]) == 0 and len(sec.planes_sc_brdrs[1]) == 0 and sec.plane_surf == -1:
@@ -127,7 +127,7 @@ def make_tetgen_mesh():
                     sec.face_marker_dict[face_marker_brdr] = (i,j)
                     
                     '''
-                    if nm_sec.sc_id == (1,3):
+                    if mn_sec.sc_id == (1,3):
                         global shared_3_27
                         PLANE_SHARED = True
                         for v in shared_3_27:
@@ -280,7 +280,7 @@ def stack_lists(vert_stack, face_stack, edge_stack=None, MAKE_EDGE_LIST=False, f
                 return vert_list, face_list
 
 # Class for a section
-class NM_section:
+class MN_section:
     
     # Init
     def __init__(self, *args, **kwargs):
@@ -321,7 +321,7 @@ class NM_section:
         self.face_marker_dict = {}
 
 # Class for a segment
-class NM_segment:
+class MN_segment:
 
     # Init
     def __init__(self, *args, **kwargs):
@@ -347,7 +347,7 @@ class NM_segment:
         self.plane_surf = -1
 
 # Class for a plane
-class NM_plane:
+class MN_plane:
     
     # Compute the surface area
     def surf_area(self):
@@ -372,32 +372,6 @@ class NM_plane:
         # Validate and update
         mesh_new.validate(verbose=False) # Important! and i dont know why
         mesh_new.update()
-        
-        # Delete an old object if it exists
-        '''
-        if bpy.data.objects.get(self.name) is not None:
-            obj_del = bpy.data.objects.get(self.name)
-            
-            # Delete MCell obj if it exists
-            mcell_obj_list = context.scene.mcell.model_objects.object_list
-            mcell_obj_names = [item.name for item in mcell_obj_list]
-            if self.name in mcell_obj_names:
-            
-                # Delete the object
-                preserve_selection_use_operator(bpy.ops.mcell.model_objects_remove, obj_del)
-
-            obj_del.select = True
-            bpy.ops.object.delete()
-        '''
-        
-        '''
-        # Don't delete - instead, if the object exists, just clear the mesh
-        if bpy.data.objects.get(self.name) is not None:
-            obj_new = bpy.data.objects.get(self.name)
-            replace_mesh(obj_new, mesh_new)
-        
-        else:
-        '''
         
         # Overwrite existing object
         obj_old = bpy.data.objects.get(self.name)
@@ -542,50 +516,6 @@ def project_pt_line(v, w, p):
     
     return v + (v_to_w * t2)
 
-# Replace a mesh of data
-def replace_mesh(obj_to_clear, rep_mesh):
-    
-    # Get the Bmesh
-    if obj_to_clear.data.is_editmode:
-        bm = bmesh.from_edit_mesh(obj_to_clear.data)
-    else:
-        bm = bmesh.new()
-        bm.from_mesh(obj_to_clear.data)
-    
-    # Clear everything!
-    bm.clear()
-
-    # Replace
-    bm.from_mesh(rep_mesh)
-
-    # Update object
-    if bm.is_wrapped:
-        bmesh.update_edit_mesh(obj_to_clear.data)
-    else:
-        bm.to_mesh(obj_to_clear.data)
-        obj_to_clear.data.update()
-
-
-# Clear a mesh of all data - HOW THE FUCK DO YOU DO THIS WITHOUT BMESH????
-def clear_mesh(obj_to_clear):
-
-    # Get the Bmesh
-    if obj_to_clear.data.is_editmode:
-        bm = bmesh.from_edit_mesh(obj_to_clear.data)
-    else:
-        bm = bmesh.new()
-        bm.from_mesh(obj_to_clear.data)
-
-    # Clear everything!
-    bm.clear()
-
-    # Update object
-    if bm.is_wrapped:
-        bmesh.update_edit_mesh(obj_to_clear.data)
-    else:
-        bm.to_mesh(obj_to_clear.data)
-        obj_to_clear.data.update()
-
 # Deep copy a list
 def unshared_copy(inList):
     if isinstance(inList, list):
@@ -594,7 +524,7 @@ def unshared_copy(inList):
 
 # Read in the swc file to know what's connected
 def get_connections(fname):
-    global nm_section_dict
+    global mn_section_dict
     
     # Store the swc data
     swc_data = []
@@ -649,15 +579,15 @@ def get_connections(fname):
                         nghbrs_max.append((min(pt2,conn_pt),max(pt2,conn_pt)))
 
                 # Make it
-                sec = NM_section(name=sec_name, sc_id=sec_ids, sc_pts=sec_pts, nghbr_sc_ids=(nghbrs_min,nghbrs_max))
-                nm_section_dict[sec_ids] = sec
+                sec = MN_section(name=sec_name, sc_id=sec_ids, sc_pts=sec_pts, nghbr_sc_ids=(nghbrs_min,nghbrs_max))
+                mn_section_dict[sec_ids] = sec
 
     return
 
 # Make segements from mesh object
-def segment_meshpy(mesh_vert_co_list, mesh_tet_vert_list, sc_tet_list, mesh_tet_nghbr_list, mesh_face_vert_marker_dict, nm_sec, n_seg_plen):
+def segment_meshpy(mesh_vert_co_list, mesh_tet_vert_list, sc_tet_list, mesh_tet_nghbr_list, mesh_face_vert_marker_dict, mn_sec, n_seg_plen):
     
-    global nm_segment_dict
+    global mn_segment_dict
     
     # Number of tets in this section
     n_tets = len(sc_tet_list)
@@ -669,7 +599,7 @@ def segment_meshpy(mesh_vert_co_list, mesh_tet_vert_list, sc_tet_list, mesh_tet_
         for vert_id in mesh_tet_vert_list[tet]:
             ctr_pt += Vector(mesh_vert_co_list[vert_id])
         ctr_pt /= 4.0
-        tet_proj_dist_list.append((nm_sec.sc_pts[0] - project_pt_line(nm_sec.sc_pts[0],nm_sec.sc_pts[1],ctr_pt)).length)
+        tet_proj_dist_list.append((mn_sec.sc_pts[0] - project_pt_line(mn_sec.sc_pts[0],mn_sec.sc_pts[1],ctr_pt)).length)
             
     # Bin them into segments
     # Bin by distance
@@ -686,7 +616,7 @@ def segment_meshpy(mesh_vert_co_list, mesh_tet_vert_list, sc_tet_list, mesh_tet_
         n_seg = 1
     
     # Store the number of segments
-    nm_sec.n_seg = n_seg
+    mn_sec.n_seg = n_seg
 
     # Create a dictionary of segment index to tet indeces
     seg_to_tet_dict = {}
@@ -704,8 +634,8 @@ def segment_meshpy(mesh_vert_co_list, mesh_tet_vert_list, sc_tet_list, mesh_tet_
     ###
 
     for i_seg in range(1,n_seg+1):
-        seg_name = nm_sec.name + ('_sg_%02d'%i_seg)
-        nm_segment_dict[(nm_sec.sc_id[0],nm_sec.sc_id[1],i_seg)] = NM_segment(name=seg_name, sg_id=(nm_sec.sc_id[0],nm_sec.sc_id[1],i_seg))
+        seg_name = mn_sec.name + ('_sg_%02d'%i_seg)
+        mn_segment_dict[(mn_sec.sc_id[0],mn_sec.sc_id[1],i_seg)] = MN_segment(name=seg_name, sg_id=(mn_sec.sc_id[0],mn_sec.sc_id[1],i_seg))
 
     ###
     # Find dividing planes
@@ -742,18 +672,18 @@ def segment_meshpy(mesh_vert_co_list, mesh_tet_vert_list, sc_tet_list, mesh_tet_
         
         # Make plane for this segment boundary
         if len(sg_brdr_face_list) > 0:
-            sg_brdr_name = nm_sec.name + ('_sg_%02d_B_'%i_this_seg) + nm_sec.name + ('_sg_%02d'%(i_this_seg+1))
-            sg_brdr_sides_names = (nm_sec.name + ('_sg_%02d'%i_this_seg),nm_sec.name + ('_sg_%02d'%(i_this_seg+1)))
-            sg_brdr_sides_ids = ((nm_sec.sc_id[0],nm_sec.sc_id[1],i_this_seg),(nm_sec.sc_id[0],nm_sec.sc_id[1],i_this_seg+1))
-            plane = NM_plane(name=sg_brdr_name, sides_names=sg_brdr_sides_names, sides_ids=sg_brdr_sides_ids, vert_list=mesh_vert_co_list, face_list=sg_brdr_face_list, CONV=True)
-            nm_segment_dict[(nm_sec.sc_id[0],nm_sec.sc_id[1],i_this_seg)].planes_sg.append(plane)
+            sg_brdr_name = mn_sec.name + ('_sg_%02d_B_'%i_this_seg) + mn_sec.name + ('_sg_%02d'%(i_this_seg+1))
+            sg_brdr_sides_names = (mn_sec.name + ('_sg_%02d'%i_this_seg),mn_sec.name + ('_sg_%02d'%(i_this_seg+1)))
+            sg_brdr_sides_ids = ((mn_sec.sc_id[0],mn_sec.sc_id[1],i_this_seg),(mn_sec.sc_id[0],mn_sec.sc_id[1],i_this_seg+1))
+            plane = MN_plane(name=sg_brdr_name, sides_names=sg_brdr_sides_names, sides_ids=sg_brdr_sides_ids, vert_list=mesh_vert_co_list, face_list=sg_brdr_face_list, CONV=True)
+            mn_segment_dict[(mn_sec.sc_id[0],mn_sec.sc_id[1],i_this_seg)].planes_sg.append(plane)
 
     ###
     # Segment's surface boundaries
     ###
 
     # All face markers possible
-    face_markers_possible = nm_sec.face_marker_dict.keys()
+    face_markers_possible = mn_sec.face_marker_dict.keys()
 
     # Go through all the segments
     for i_this_seg in seg_to_tet_dict.keys():
@@ -764,29 +694,6 @@ def segment_meshpy(mesh_vert_co_list, mesh_tet_vert_list, sc_tet_list, mesh_tet_
         
         # Tets in this section
         this_tet_ids = seg_to_tet_dict[i_this_seg]
-
-        '''
-        # TEMP
-        # Make an object out of all the tets
-        if nm_sec.name == "sc_02_03":
-            tmp_vert_list = []
-            tmp_dict = {}
-            tmp_face_list = []
-
-            for t in this_tet_ids:
-                this_verts = mesh_tet_vert_list[t]
-                for v in this_verts:
-                    if not v in tmp_dict.keys():
-                        tmp_vert_list.append(mesh_vert_co_list[v])
-                        tmp_dict[v] = len(tmp_vert_list) - 1
-                for ids in [[0,1,2],[0,1,3],[0,2,3],[1,2,3]]:
-                    tmp = [tmp_dict[this_verts[ids[0]]],tmp_dict[this_verts[ids[1]]],tmp_dict[this_verts[ids[2]]]]
-                    tmp.sort()
-                    if not tmp in tmp_face_list:
-                        tmp_face_list.append(tmp)
-            plane = NM_plane(name="TetMesh", sides_names=("a","b"), sides_ids=((1,2,3),(-1)), vert_list=tmp_vert_list, face_list=tmp_face_list, CONV=True)
-            plane.make_plane()
-        '''
 
         # Go through all the tets in this seg
         zero_marker_face_list = []
@@ -808,88 +715,32 @@ def segment_meshpy(mesh_vert_co_list, mesh_tet_vert_list, sc_tet_list, mesh_tet_
                     else:
                         sg_sc_surf_face_dict[face_marker] = [striplet]
 
-                # TEMP
-                '''
-                elif face_marker == 0:
-                    # This face is supposedly one of the interior faces
-                    # However, the unfortunately the assignments of tets to element attributes by TetGen is not perfect
-                    # and does not work as expected. Hence this needs to be checked by counting neighbors
-
-                    # To be an interior face, this face needs to be shared by two tets, i.e. this face needs to occur twice
-                    # Keep a running list of all triplets that have occurred to check this
-                    if striplet in zero_marker_face_list:
-                        del zero_marker_face_list[zero_marker_face_list.index(striplet)]
-                    else:
-                        zero_marker_face_list.append(striplet)
-                '''
-
-        # TEMP
-        '''
-        # Check that there are no interior faces mal-assigned
-        if len(zero_marker_face_list) > 0:
-            # These faces are "boundary/surface" faces!
-            # Assign them by searching randomly for neighbors
-            for zero_f in zero_marker_face_list:
-                print("> > Need to assign zero_f = " + str(zero_f))
-                # Search through all assigned face markers
-                for face_marker, trip_list in sg_sc_surf_face_dict.items(): # NOTE: should NOT need to check sg_plane_surf_face_list
-                    # Flatten the list
-                    trip_flat = [item for sublist in trip_list for item in sublist]
-                    if zero_f[0] in trip_flat and zero_f[1] in trip_flat:
-                        # Just take this surface face marker
-                        sg_sc_surf_face_dict[face_marker].append(zero_f)
-                        print("Assigned to face marker: " + str(face_marker))
-                        break # Stop!
-        '''
-
-        # TEMP
-        '''
-        # Make an object out of all the faces that constitute the surface
-        if nm_sec.name == "sc_02_03":
-            tmp_face_list = sg_plane_surf_face_list
-            for l in sg_sc_surf_face_dict.values():
-                tmp_face_list += l
-            # Vert list
-            tmp_dict = {}
-            tmp_vert_list = []
-            for f in tmp_face_list:
-                for v in f:
-                    if not v in tmp_dict.keys():
-                        tmp_vert_list.append(mesh_vert_co_list[v])
-                        tmp_dict[v] = len(tmp_vert_list) - 1
-            tmp_face_list_2 = []
-            for f in tmp_face_list:
-                tmp_face_list_2.append([tmp_dict[f[0]],tmp_dict[f[1]],tmp_dict[f[2]]])
-            plane = NM_plane(name="Border", sides_names=("a","b"), sides_ids=((1,2,3),(-1)), vert_list=tmp_vert_list, face_list=tmp_face_list_2, CONV=True)
-            plane.make_plane()
-        '''
-
         # Make the surface plane for this segment
         if len(sg_plane_surf_face_list) > 0:
-            sg_surf_name = nm_sec.name + ('_sg_%02d_B_surf'%i_this_seg)
-            sg_surf_sides_names = (nm_sec.name + ('_sg_%02d'%i_this_seg),'surf')
-            sg_surf_sides_ids = ((nm_sec.sc_id[0],nm_sec.sc_id[1],i_this_seg),(-1))
-            plane = NM_plane(name=sg_surf_name, sides_names=sg_surf_sides_names, sides_ids=sg_surf_sides_ids, vert_list=mesh_vert_co_list, face_list=sg_plane_surf_face_list, CONV=True)
-            nm_segment_dict[(nm_sec.sc_id[0],nm_sec.sc_id[1],i_this_seg)].plane_surf = plane
+            sg_surf_name = mn_sec.name + ('_sg_%02d_B_surf'%i_this_seg)
+            sg_surf_sides_names = (mn_sec.name + ('_sg_%02d'%i_this_seg),'surf')
+            sg_surf_sides_ids = ((mn_sec.sc_id[0],mn_sec.sc_id[1],i_this_seg),(-1))
+            plane = MN_plane(name=sg_surf_name, sides_names=sg_surf_sides_names, sides_ids=sg_surf_sides_ids, vert_list=mesh_vert_co_list, face_list=sg_plane_surf_face_list, CONV=True)
+            mn_segment_dict[(mn_sec.sc_id[0],mn_sec.sc_id[1],i_this_seg)].plane_surf = plane
 
         # Make the section-surface plane for this segment
         if len(sg_sc_surf_face_dict.keys()) > 0:
             for face_marker in sg_sc_surf_face_dict.keys():
                 sg_sc_surf_face_list = sg_sc_surf_face_dict[face_marker]
                 # The hard part: wtf am i bordering?
-                brdring_plane_idxs = nm_sec.face_marker_dict[face_marker]
-                brdring_plane = nm_sec.planes_sc_brdrs[brdring_plane_idxs[0]][brdring_plane_idxs[1]]
+                brdring_plane_idxs = mn_sec.face_marker_dict[face_marker]
+                brdring_plane = mn_sec.planes_sc_brdrs[brdring_plane_idxs[0]][brdring_plane_idxs[1]]
                 sides_ids = brdring_plane.sides_ids
-                if sides_ids[0] == nm_sec.sc_id:
+                if sides_ids[0] == mn_sec.sc_id:
                     brdring_id = sides_ids[1]
-                elif sides_ids[1] == nm_sec.sc_id:
+                elif sides_ids[1] == mn_sec.sc_id:
                     brdring_id = sides_ids[0]
                 else:
                     print("Error! Something went wrong with your planes.")
                 
-                min_id = min(brdring_id,nm_sec.sc_id)
-                max_id = max(brdring_id,nm_sec.sc_id)
-                if min_id == nm_sec.sc_id:
+                min_id = min(brdring_id,mn_sec.sc_id)
+                max_id = max(brdring_id,mn_sec.sc_id)
+                if min_id == mn_sec.sc_id:
                     sg_surf_name = 'sc_%02d_%02d_sg_%02d_B_'%(min_id[0],min_id[1],i_this_seg) + 'sc_%02d_%02d'%(max_id[0],max_id[1])
                     sg_surf_sides_names = ('sc_%02d_%02d_sg_%02d'%(min_id[0],min_id[1],i_this_seg),'sc_%02d_%02d'%(max_id[0],max_id[1]))
                     sg_surf_sides_ids = ((min_id[0],min_id[1],i_this_seg),(max_id[0],max_id[1]))
@@ -898,15 +749,8 @@ def segment_meshpy(mesh_vert_co_list, mesh_tet_vert_list, sc_tet_list, mesh_tet_
                     sg_surf_sides_names = ('sc_%02d_%02d'%(min_id[0],min_id[1]),'sc_%02d_%02d_sg_%02d'%(max_id[0],max_id[1],i_this_seg))
                     sg_surf_sides_ids = ((min_id[0],min_id[1]),(max_id[0],max_id[1],i_this_seg))
 
-                plane = NM_plane(name=sg_surf_name, sides_names=sg_surf_sides_names, sides_ids=sg_surf_sides_ids, vert_list=mesh_vert_co_list, face_list=sg_sc_surf_face_list, CONV=True)
-                nm_segment_dict[(nm_sec.sc_id[0],nm_sec.sc_id[1],i_this_seg)].planes_sc.append(plane)
-
-                '''
-                # TEMP
-                if min_id[0] == 2 and min_id[1] == 3 and max_id[0] == 2 and max_id[1] == 6:
-                    print(">>>> Making: " + str(sg_surf_name))
-                    plane.make_plane()
-                '''
+                plane = MN_plane(name=sg_surf_name, sides_names=sg_surf_sides_names, sides_ids=sg_surf_sides_ids, vert_list=mesh_vert_co_list, face_list=sg_sc_surf_face_list, CONV=True)
+                mn_segment_dict[(mn_sec.sc_id[0],mn_sec.sc_id[1],i_this_seg)].planes_sc.append(plane)
 
     # Fin!
     return
@@ -952,11 +796,11 @@ def f_compartmentize(context, swc_filepath):
     t_st = []
     t_st.append(time.time())
 
-    global nm_section_dict
-    global nm_segment_dict
+    global mn_section_dict
+    global mn_segment_dict
     
-    nm_section_dict = {}
-    nm_segment_dict = {}
+    mn_section_dict = {}
+    mn_segment_dict = {}
     
     # Get data from the SWC file
     get_connections(swc_filepath)
@@ -968,6 +812,7 @@ def f_compartmentize(context, swc_filepath):
         return
     else:
         ob = ob_list[0]
+        ob_name = ob.name
     
     # All vertices
     ob_vert_list = [tuple(item.co) for item in ob.data.vertices]
@@ -989,6 +834,8 @@ def f_compartmentize(context, swc_filepath):
         # Check that it is a section
         if len(sec_name) == 8 and sec_name[0:3] == 'sc_':
             
+            print("Section: " + str(sec_name))
+
             # Get the vert indeces
             pt1 = int(sec_name[3:5])
             pt2 = int(sec_name[6:8])
@@ -1006,9 +853,9 @@ def f_compartmentize(context, swc_filepath):
             surf_sides_names = (surf_name,-1)
             surf_sides_ids = ((pt_min,pt_max),(-1))
             # Make the plane
-            plane_surf = NM_plane(name=surf_name, sides_names=surf_sides_names, sides_ids=surf_sides_ids, vert_list=ob_vert_list, face_list=surf_face_list, CONV=True)
+            plane_surf = MN_plane(name=surf_name, sides_names=surf_sides_names, sides_ids=surf_sides_ids, vert_list=ob_vert_list, face_list=surf_face_list, CONV=True)
             # Store the plane as the surface for this section
-            nm_section_dict[(pt_min,pt_max)].plane_surf = plane_surf
+            mn_section_dict[(pt_min,pt_max)].plane_surf = plane_surf
             
             # Get the edges
             bpy.ops.object.mode_set(mode='EDIT')
@@ -1034,8 +881,8 @@ def f_compartmentize(context, swc_filepath):
     ###
 
     # Go through all of the sections
-    for this_sc_id in nm_section_dict.keys():
-        this_sc = nm_section_dict[this_sc_id]
+    for this_sc_id in mn_section_dict.keys():
+        this_sc = mn_section_dict[this_sc_id]
         
         # Border
         this_sc_edge = sc_edge_dict[this_sc_id]
@@ -1070,11 +917,11 @@ def f_compartmentize(context, swc_filepath):
                         plane_face_list = [[ctr_pt_id, item[0], item[1]] for item in verts_share]
 
                         # Get the actual neighboring section
-                        nghbr_sc = nm_section_dict[nghbr_sc_id]
+                        nghbr_sc = mn_section_dict[nghbr_sc_id]
 
                         # Make a new plane
                         name_plane = this_sc.name + "_B_" + nghbr_sc.name
-                        plane = NM_plane(name=name_plane,sides_names=(this_sc.name,nghbr_sc.name),sides_ids=(this_sc_id,nghbr_sc_id),vert_list=plane_vert_list,face_list=plane_face_list,CONV=True)
+                        plane = MN_plane(name=name_plane,sides_names=(this_sc.name,nghbr_sc.name),sides_ids=(this_sc_id,nghbr_sc_id),vert_list=plane_vert_list,face_list=plane_face_list,CONV=True)
                         
                         # Add the plane to both section boundaries
                         this_sc.planes_sc_brdrs[i_end].append(plane)
@@ -1084,6 +931,8 @@ def f_compartmentize(context, swc_filepath):
                             nghbr_sc.planes_sc_brdrs[1].append(plane)
                         else:
                             print("Something went wrong!")
+
+                        print("Made plane: " + str(name_plane))
 
     # # # Free memory
     del ob
@@ -1125,14 +974,6 @@ def f_compartmentize(context, swc_filepath):
     # # # Reclaim memory
     del mesh_built
 
-    ## DEBUG = UNIMPORTANT TO FUNCTION
-    # All the unique attributes present
-    unique_tet_att = list(set(mesh_tet_att))
-    print("> > Unique tet attributes present: ")
-    print(unique_tet_att)
-    print(len(unique_tet_att))
-    ##
-
     # Dictionary of section attribute to tet id
     sc_att_tet_dict = {}
     for i_tet, sc_att in enumerate(mesh_tet_att):
@@ -1171,13 +1012,6 @@ def f_compartmentize(context, swc_filepath):
                 if DONE == True:
                     break
 
-    ## DEBUG = UNIMPORTANT TO FUNCTION
-    # All attributes that were assigned
-    print("> > All att that were assigned were assigned to these sections:")
-    print(sc_tet_dict.keys())
-    print(len(sc_tet_dict.keys()))
-    ##
-
     # Time
     t_st.append(time.time())
     print("> Created Tetgen Mesh: time: " + str(t_st[-1]-t_st[-2]))
@@ -1189,11 +1023,12 @@ def f_compartmentize(context, swc_filepath):
     # Number of segments per length
     n_seg_plen = 1.5
 
-    for sec_id in list(nm_section_dict.keys()):
+    for sec_id in list(mn_section_dict.keys()):
         
         # if sec_id in sc_tet_dict: # Why should this not be the case? This occurs for some reason....
         
-        sec = nm_section_dict[sec_id]
+        sec = mn_section_dict[sec_id]
+        print("Dividing tets into segments for section: " + str(sec_id))
 
         # Make the dividing planes
         segment_meshpy(mesh_vert_co_list, mesh_tet_vert_list, sc_tet_dict[sec_id], mesh_tet_nghbr_list, mesh_face_vert_marker_dict, sec, n_seg_plen)
@@ -1217,11 +1052,11 @@ def f_compartmentize(context, swc_filepath):
     t_st.append(time.time())
 
     # Go through all of the segments
-    for nm_seg_id in nm_segment_dict.keys():
-        nm_seg = nm_segment_dict[nm_seg_id]
+    for mn_seg_id in mn_segment_dict.keys():
+        mn_seg = mn_segment_dict[mn_seg_id]
 
         # Go through all of the section bounding planes
-        for plane_sc in nm_seg.planes_sc:
+        for plane_sc in mn_seg.planes_sc:
 
             # What's on the other side of this plane?
             sides_ids = plane_sc.sides_ids
@@ -1234,18 +1069,18 @@ def f_compartmentize(context, swc_filepath):
                 print("Warning! This isn't a segment->section plane! Should this be possible?")
             
             # Get all the segments that are in the other side's section
-            for other_nm_seg_id in nm_segment_dict.keys():
+            for other_mn_seg_id in mn_segment_dict.keys():
 
                 # Obviously, check yourself before you wreck yourself
-                if nm_seg_id != other_nm_seg_id:
+                if mn_seg_id != other_mn_seg_id:
                     # Is this segment in the section we care about
-                    if other_nm_seg_id[0:2] == other_side_sc:
+                    if other_mn_seg_id[0:2] == other_side_sc:
 
                         # Get the segment
-                        other_nm_seg = nm_segment_dict[other_nm_seg_id]
+                        other_mn_seg = mn_segment_dict[other_mn_seg_id]
 
                         # Check all the planes in this segment for overlap
-                        for other_plane_sc in other_nm_seg.planes_sc:
+                        for other_plane_sc in other_mn_seg.planes_sc:
                             
                             # What's on the other side of this plane?
                             other_sides_ids = other_plane_sc.sides_ids
@@ -1258,15 +1093,15 @@ def f_compartmentize(context, swc_filepath):
                                 print("Warning! This isn't a segment->section plane! Should this be possible?")
 
                             # Is the section on the other side of this plane to original one?
-                            if nm_seg_id[0:2] == other_other_side_sc:
+                            if mn_seg_id[0:2] == other_other_side_sc:
                                 
                                 # The would be plane id
-                                min_id = min(nm_seg_id,other_nm_seg_id)
-                                max_id = max(nm_seg_id,other_nm_seg_id)
+                                min_id = min(mn_seg_id,other_mn_seg_id)
+                                max_id = max(mn_seg_id,other_mn_seg_id)
                                 p_sides_ids = (min_id,max_id)
 
                                 # Make sure we didn't check this already
-                                if not p_sides_ids in [plane0.sides_ids for seg0 in nm_segment_dict.values() for plane0 in seg0.planes_sg]:
+                                if not p_sides_ids in [plane0.sides_ids for seg0 in mn_segment_dict.values() for plane0 in seg0.planes_sg]:
                                 
                                     # Check for overlap
                                     vert_list, face_list = plane_sc.overlap(other_plane_sc)
@@ -1276,11 +1111,11 @@ def f_compartmentize(context, swc_filepath):
                                         # Make yet another plane
                                         p_name = 'sc_%02d_%02d_sg_%02d'%min_id + '_B_' + 'sc_%02d_%02d_sg_%02d'%max_id
                                         p_sides_names = ('sc_%02d_%02d_sg_%02d'%min_id, 'sc_%02d_%02d_sg_%02d'%max_id)
-                                        plane = NM_plane(name=p_name, sides_names=p_sides_names, sides_ids=p_sides_ids, vert_list=vert_list, face_list=face_list, CONV=True)
+                                        plane = MN_plane(name=p_name, sides_names=p_sides_names, sides_ids=p_sides_ids, vert_list=vert_list, face_list=face_list, CONV=True)
                                         
                                         # Add the plane to both segments
-                                        nm_seg.planes_sg.append(plane)
-                                        other_nm_seg.planes_sg.append(plane)
+                                        mn_seg.planes_sg.append(plane)
+                                        other_mn_seg.planes_sg.append(plane)
 
 
     # Time
@@ -1296,66 +1131,66 @@ def f_compartmentize(context, swc_filepath):
     
     # Go through all segments
     plane_sides_ids_done = [] # Make sure not to double count any planes
-    for nm_seg_id in nm_segment_dict.keys():
-        nm_seg = nm_segment_dict[nm_seg_id]
+    for mn_seg_id in mn_segment_dict.keys():
+        mn_seg = mn_segment_dict[mn_seg_id]
         
-        if nm_seg.plane_surf != -1: # No surface for this segment (definitely possible!)
+        if mn_seg.plane_surf != -1: # No surface for this segment (definitely possible!)
             
-            if not nm_seg.plane_surf.sides_ids in plane_sides_ids_done:
+            if not mn_seg.plane_surf.sides_ids in plane_sides_ids_done:
                 
-                plane_surf_vert_stack += [nm_seg.plane_surf.vert_list]
-                plane_surf_face_stack += [nm_seg.plane_surf.face_list]
+                plane_surf_vert_stack += [mn_seg.plane_surf.vert_list]
+                plane_surf_face_stack += [mn_seg.plane_surf.face_list]
 
                 # Prevent double counting
-                plane_sides_ids_done.append(nm_seg.plane_surf.sides_ids)
+                plane_sides_ids_done.append(mn_seg.plane_surf.sides_ids)
 
     # Correct the lists
     plane_surf_vert_list, plane_surf_face_list = stack_lists(plane_surf_vert_stack, plane_surf_face_stack)
 
     # Make the plane
-    nm_surface_plane = NM_plane(name="NM_Surface",vert_list = plane_surf_vert_list, face_list = plane_surf_face_list, CONV=True)
+    mn_surface_plane = MN_plane(name=ob_name+"_surface",vert_list = plane_surf_vert_list, face_list = plane_surf_face_list, CONV=True)
 
     # Make make the plane
-    obj_nm_surface_plane = nm_surface_plane.make_plane()
+    obj_mn_surface_plane = mn_surface_plane.make_plane()
 
     # Set active
-    context.scene.objects.active = obj_nm_surface_plane
-    obj_nm_surface_plane.select = True
+    context.scene.objects.active = obj_mn_surface_plane
+    obj_mn_surface_plane.select = True
 
     # Add to MCell
-    preserve_selection_use_operator(bpy.ops.mcell.model_objects_add, obj_nm_surface_plane)
+    preserve_selection_use_operator(bpy.ops.mcell.model_objects_add, obj_mn_surface_plane)
 
     # Add each of the segments as a region
     face_idx_ctr = 0
     plane_sides_ids_done = [] # Make sure not to double count any planes
-    for nm_seg_id in nm_segment_dict.keys():
-        nm_seg = nm_segment_dict[nm_seg_id]
+    for mn_seg_id in mn_segment_dict.keys():
+        mn_seg = mn_segment_dict[mn_seg_id]
         
-        if nm_seg.plane_surf != -1: # No surface for this segment (definitely possible!)
+        if mn_seg.plane_surf != -1: # No surface for this segment (definitely possible!)
             
-            if not nm_seg.plane_surf.sides_ids in plane_sides_ids_done:
+            if not mn_seg.plane_surf.sides_ids in plane_sides_ids_done:
                 
                 # Region name
-                reg_name = nm_seg.plane_surf.name
+                reg_name = mn_seg.plane_surf.name
 
                 # Make region
-                obj_nm_surface_plane.mcell.regions.add_region_by_name(context,reg_name)
+                obj_mn_surface_plane.mcell.regions.add_region_by_name(context,reg_name)
                 # Get region
-                new_reg = obj_nm_surface_plane.mcell.regions.region_list[reg_name]
+                new_reg = obj_mn_surface_plane.mcell.regions.region_list[reg_name]
                 
                 # Assign faces
-                face_ids = range(face_idx_ctr,face_idx_ctr+len(nm_seg.plane_surf.face_list))
-                face_idx_ctr += len(nm_seg.plane_surf.face_list)
-                new_reg.set_region_faces(obj_nm_surface_plane.data, face_ids)
+                face_ids = range(face_idx_ctr,face_idx_ctr+len(mn_seg.plane_surf.face_list))
+                face_idx_ctr += len(mn_seg.plane_surf.face_list)
+                new_reg.set_region_faces(obj_mn_surface_plane.data, face_ids)
 
                 # Prevent double counting
-                plane_sides_ids_done.append(nm_seg.plane_surf.sides_ids)
+                plane_sides_ids_done.append(mn_seg.plane_surf.sides_ids)
 
     # Update (but dont validate because who knows)
-    obj_nm_surface_plane.data.update()
+    obj_mn_surface_plane.data.update()
 
     # Deselect
-    obj_nm_surface_plane.select = False
+    obj_mn_surface_plane.select = False
 
     # Time
     t_st.append(time.time())
@@ -1370,11 +1205,11 @@ def f_compartmentize(context, swc_filepath):
 
     # Go through all segments
     plane_sides_ids_done = [] # Make sure not to double count any planes
-    for nm_seg_id in nm_segment_dict.keys():
-        nm_seg = nm_segment_dict[nm_seg_id]
+    for mn_seg_id in mn_segment_dict.keys():
+        mn_seg = mn_segment_dict[mn_seg_id]
         
         # Go through all it's segment bounding planes
-        for plane_sg in nm_seg.planes_sg:
+        for plane_sg in mn_seg.planes_sg:
             
             if not plane_sg.sides_ids in plane_sides_ids_done:
                 seg_surf_vert_stack += [plane_sg.vert_list]
@@ -1386,50 +1221,27 @@ def f_compartmentize(context, swc_filepath):
     # Correct the lists
     seg_surf_vert_list, seg_surf_face_list = stack_lists(seg_surf_vert_stack, seg_surf_face_stack)
 
-    '''
-    # TEMP: throw out pieces outside the desired range
-    tmp_vert_list = []
-    tmp_dict = {}
-    tmp_face_list = []
-    # What verts are allowed
-    for i_v,v in enumerate(seg_surf_vert_list):
-        if v[1] > -9421.5459-1.0 and v[1] < -9421.5459+1.0 and v[2] > 315.18835-1.0 and v[2] < 315.18835+1.0:
-            tmp_vert_list.append(v)
-            tmp_dict[i_v] = len(tmp_vert_list) - 1
-    # What faces are allowed
-    tmp_keys = list(tmp_dict.keys())
-    for f in seg_surf_face_list:
-        if f[0] in tmp_keys and f[1] in tmp_keys and f[2] in tmp_keys:
-            tmp_face_list.append([tmp_dict[f[0]],tmp_dict[f[1]],tmp_dict[f[2]]])
-
-    print("> Constructed temp vert and face list:")
-    print(len(tmp_vert_list))
-    print(len(tmp_face_list))
-
-    nm_seg_plane = NM_plane(name="NM_Segment",vert_list = tmp_vert_list, face_list = tmp_face_list, CONV=True)
-    '''
-
     # Make the plane
-    nm_seg_plane = NM_plane(name="NM_Segment",vert_list = seg_surf_vert_list, face_list = seg_surf_face_list, CONV=True)
+    mn_seg_plane = MN_plane(name=ob_name+"_segment",vert_list = seg_surf_vert_list, face_list = seg_surf_face_list, CONV=True)
 
     # Make make the plane
-    obj_nm_seg_plane = nm_seg_plane.make_plane()
+    obj_mn_seg_plane = mn_seg_plane.make_plane()
 
     # Set active
-    context.scene.objects.active = obj_nm_seg_plane
-    obj_nm_seg_plane.select = True
+    context.scene.objects.active = obj_mn_seg_plane
+    obj_mn_seg_plane.select = True
 
     # Add to MCell
-    preserve_selection_use_operator(bpy.ops.mcell.model_objects_add, obj_nm_seg_plane)
+    preserve_selection_use_operator(bpy.ops.mcell.model_objects_add, obj_mn_seg_plane)
 
     # Add each of the segments as a region
     face_idx_ctr = 0
     plane_sides_ids_done = [] # Make sure not to double count any planes
-    for nm_seg_id in nm_segment_dict.keys():
-        nm_seg = nm_segment_dict[nm_seg_id]
+    for mn_seg_id in mn_segment_dict.keys():
+        mn_seg = mn_segment_dict[mn_seg_id]
         
         # Go through all it's segment bounding planes
-        for plane_sg in nm_seg.planes_sg:
+        for plane_sg in mn_seg.planes_sg:
 
             if not plane_sg.sides_ids in plane_sides_ids_done:
                 
@@ -1437,23 +1249,23 @@ def f_compartmentize(context, swc_filepath):
                 reg_name = plane_sg.name
                 
                 # Make region
-                obj_nm_seg_plane.mcell.regions.add_region_by_name(context,reg_name)
+                obj_mn_seg_plane.mcell.regions.add_region_by_name(context,reg_name)
                 # Get region
-                new_reg = obj_nm_seg_plane.mcell.regions.region_list[reg_name]
+                new_reg = obj_mn_seg_plane.mcell.regions.region_list[reg_name]
 
                 # Assign faces
                 face_ids = range(face_idx_ctr,face_idx_ctr+len(plane_sg.face_list))
                 face_idx_ctr += len(plane_sg.face_list)
-                new_reg.set_region_faces(obj_nm_seg_plane.data, face_ids)
+                new_reg.set_region_faces(obj_mn_seg_plane.data, face_ids)
 
                 # Prevent double counting
                 plane_sides_ids_done.append(plane_sg.sides_ids)
 
     # Update (but dont validate because who knows)
-    obj_nm_seg_plane.data.update()
+    obj_mn_seg_plane.data.update()
 
     # Deselect
-    obj_nm_seg_plane.select = False
+    obj_mn_seg_plane.select = False
 
     # Time
     t_st.append(time.time())
@@ -1469,14 +1281,14 @@ def f_compartmentize(context, swc_filepath):
     ###
 
     # Set active
-    context.scene.objects.active = obj_nm_surface_plane
-    obj_nm_surface_plane.select = True
+    context.scene.objects.active = obj_mn_surface_plane
+    obj_mn_surface_plane.select = True
 
     # Edit mode
     bpy.ops.object.mode_set(mode='EDIT')
 
     # Go through all the regions in the object
-    for reg in obj_nm_surface_plane.mcell.regions.region_list:
+    for reg in obj_mn_surface_plane.mcell.regions.region_list:
         # Select region
         reg.select_region_faces(context)
 
@@ -1490,21 +1302,21 @@ def f_compartmentize(context, swc_filepath):
     bpy.ops.object.mode_set(mode='OBJECT')
 
     # Deselect
-    obj_nm_surface_plane.select = False
+    obj_mn_surface_plane.select = False
 
     ###
     # Segments
     ###
 
     # Set active
-    context.scene.objects.active = obj_nm_seg_plane
-    obj_nm_seg_plane.select = True
+    context.scene.objects.active = obj_mn_seg_plane
+    obj_mn_seg_plane.select = True
     
     # Edit mode
     bpy.ops.object.mode_set(mode='EDIT')
     
     # Go through all the regions in the object
-    for reg in obj_nm_seg_plane.mcell.regions.region_list:
+    for reg in obj_mn_seg_plane.mcell.regions.region_list:
         # Select region
         reg.select_region_faces(context)
         
@@ -1519,7 +1331,7 @@ def f_compartmentize(context, swc_filepath):
         id_max_max = int(reg_name[23:25])
         if id_min_min == id_max_min and id_min_max == id_max_max:
             # Segment boundary
-            sc_pts = nm_section_dict[(id_min_min,id_min_max)].sc_pts
+            sc_pts = mn_section_dict[(id_min_min,id_min_max)].sc_pts
             vec_check = sc_pts[1]-sc_pts[0]
         else:
             # Section boundary
@@ -1529,16 +1341,16 @@ def f_compartmentize(context, swc_filepath):
             max_uniq_id = max(uniq_ids)
             min_id = min(shared_id,max_uniq_id)
             max_id = max(shared_id,max_uniq_id)
-            sc_pts = nm_section_dict[(min_id,max_id)].sc_pts
+            sc_pts = mn_section_dict[(min_id,max_id)].sc_pts
             vec_check = sc_pts[1]-sc_pts[0]
 
         # Finally, check any face - dot product should be positive!
-        for face in obj_nm_seg_plane.data.polygons:
+        for face in obj_mn_seg_plane.data.polygons:
             if face.select == True:
                 fSel = face.vertices
                 break
 
-        v_fSel = [obj_nm_seg_plane.data.vertices[v].co for v in fSel]
+        v_fSel = [obj_mn_seg_plane.data.vertices[v].co for v in fSel]
         vec_fSel = (v_fSel[1]-v_fSel[0]).cross(v_fSel[2]-v_fSel[1])
         # Dot product
         dp = vec_fSel.dot(vec_check)
@@ -1553,7 +1365,7 @@ def f_compartmentize(context, swc_filepath):
     bpy.ops.object.mode_set(mode='OBJECT')
 
     # Deselect
-    obj_nm_surface_plane.select = False
+    obj_mn_surface_plane.select = False
 
     ###
     # Write out some relevant information
@@ -1561,7 +1373,7 @@ def f_compartmentize(context, swc_filepath):
 
     write_nseg_sec(DIR+"nseg_sec.txt")
 
-    write_nm_region_names_areas(DIR+"region_names_areas.txt")
+    write_mn_region_names_areas(DIR+"region_names_areas.txt", ob_name)
 
     ###
     # Make individual objects out of all of the planes
@@ -1571,11 +1383,11 @@ def f_compartmentize(context, swc_filepath):
         
     # Go through all segments
     plane_sides_ids_done = [] # Make sure not to double count any planes
-    for nm_seg_id in nm_segment_dict.keys():
-        nm_seg = nm_segment_dict[nm_seg_id]
+    for mn_seg_id in mn_segment_dict.keys():
+        mn_seg = mn_segment_dict[mn_seg_id]
 
         # Go through all it's segment bounding planes
-        for plane_sg in (nm_seg.planes_sg + [nm_seg.plane_surf]):
+        for plane_sg in (mn_seg.planes_sg + [mn_seg.plane_surf]):
             
             if plane_sg != -1: # No surface for this compartment
                 

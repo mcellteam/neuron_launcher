@@ -21,14 +21,17 @@ from . import check_double_assignments
 # Color regions randomly
 from . import color_regions
 
-# Compartmentalize a mesh using the tetrahedral meshing method
+# Compartmentize a mesh using the tetrahedral meshing method
 from . import compartmentize
 
-# Compartmentalize sections only + simultaneously create separate objects
+# Compartmentize sections only + simultaneously create separate objects
 from . import compartmentize_sc_only
 
 # Explode compartments for visualisation if they exist
 from . import explode
+
+# Convert two objects (surface and segments) into individual compartment objects
+from . import regions_to_compartments
 
 import os
 
@@ -206,7 +209,7 @@ class ColorRegions(bpy.types.Operator):
 # Class to compartmentize
 class Compartmentize(bpy.types.Operator):
     bl_idname = "nrnlauncher.compartmentize"
-    bl_label = "Compartmentalize"
+    bl_label = "Compartmentize"
 
     def execute ( self, context ):
         print ( "Execute Compartmentize" )
@@ -231,7 +234,7 @@ class Compartmentize(bpy.types.Operator):
 # Class to compartmentize sections only and simultaneously create separate compartments
 class CompartmentizeSCOnly(bpy.types.Operator):
     bl_idname = "nrnlauncher.compartmentize_sc_only"
-    bl_label = "Compartmentalize Sections Only + Create as Objects"
+    bl_label = "Compartmentize Sections Only"
 
     def execute ( self, context ):
         print ( "Execute CompartmentizeSCOnly" )
@@ -275,6 +278,23 @@ class ExplodeCompartments(bpy.types.Operator):
             explode.f_explode(context, res[1], context.scene.nrnlauncher.explode_factor)
         else:
             raise SystemError(res[1])  
+
+        return {"FINISHED"}
+
+# Class to convert two objects (their MCell regions) to individual section objects
+class RegionsToCompartments(bpy.types.Operator):
+    bl_idname = "nrnlauncher.regions_to_compartments"
+    bl_label = "Convert Regions To Compartments"
+
+    def execute ( self, context ):
+        print ( "Execute RegionsToCompartments" )
+        regions_to_compartments.f_regions_to_compartments(context)
+
+        return {"FINISHED"}
+    
+    def invoke ( self, context, event ):
+        print ( "Invoke RegionsToCompartments" )
+        regions_to_compartments.f_regions_to_compartments(context)     
 
         return {"FINISHED"}
 
@@ -444,15 +464,22 @@ class NeuronLauncherPropGroup(bpy.types.PropertyGroup):
             row = box.row()
             split = box.split()
             col = split.column(align=True)
-            col.label("Create section and segment compartments in the surface mesh")
-            col.label("Method: tetrahedral mesh for the volume (SLOW)")
+            col.label("Create section and segment compartments")
+            col.label("Method: tetrahedralization of the volume (SLOW)")
             col.operator("nrnlauncher.compartmentize")
 
             row = box.row()
             split = box.split()
             col = split.column(align=True)
-            col.label("Create only section compartments, and add as separate objects")
+            col.label("Create only section compartments")
+            col.label("Method: cylindrical assignments (FAST)")
             col.operator("nrnlauncher.compartmentize_sc_only")
+
+            row = box.row()
+            split = box.split()
+            col = split.column(align=True)
+            col.label("Create separate objects for each MCell region")
+            col.operator("nrnlauncher.regions_to_compartments")
 
             row = box.row()
             split = box.split()
