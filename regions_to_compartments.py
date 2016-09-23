@@ -206,22 +206,25 @@ def f_regions_to_compartments(context):
 		###################################
 		###################################
 
-		# Make sure the new object is the active
-		context.scene.objects.active = obj_new
+		# Only if a material is assigned for this section (might not be true)
+		if sc_id in mat_dict:
 
-		# Select all vertices
-		for f in obj_new.data.polygons:
-			f.select = True
+			# Make sure the new object is the active
+			context.scene.objects.active = obj_new
 
-		# Add a material slot
-		bpy.ops.object.material_slot_add()
+			# Select all vertices
+			for f in obj_new.data.polygons:
+				f.select = True
 
-		# Assign a material to the last slot
-		context.object.material_slots[bpy.context.object.material_slots.__len__() - 1].material = mat_dict[sc_id]
+			# Add a material slot
+			bpy.ops.object.material_slot_add()
 
-		# Assign the material on the selected vertices
-		bpy.ops.object.material_slot_assign()
-		
+			# Assign a material to the last slot
+			context.object.material_slots[bpy.context.object.material_slots.__len__() - 1].material = mat_dict[sc_id]
+
+			# Assign the material on the selected vertices
+			bpy.ops.object.material_slot_assign()
+			
 
 	print("> Finished: f_regions_to_compartments")
 
