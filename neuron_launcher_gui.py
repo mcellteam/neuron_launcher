@@ -22,7 +22,10 @@ from . import check_double_assignments
 from . import color_regions
 
 # Compartmentize a mesh using the tetrahedral meshing method
-from . import compartmentize
+from . import compartmentize_tet
+
+# Compartmentize a mesh using the cylinder method
+from . import compartmentize_cyl
 
 # Compartmentize sections only + simultaneously create separate objects
 from . import compartmentize_sc_only
@@ -206,26 +209,51 @@ class ColorRegions(bpy.types.Operator):
 #######################################################
 #######################################################
 
-# Class to compartmentize
-class Compartmentize(bpy.types.Operator):
-    bl_idname = "nrnlauncher.compartmentize"
-    bl_label = "Compartmentize"
+# Class to compartmentize by the tet method
+class CompartmentizeTet(bpy.types.Operator):
+    bl_idname = "nrnlauncher.compartmentize_tet"
+    bl_label = "Compartmentize (Tetrahedral)"
 
     def execute ( self, context ):
-        print ( "Execute Compartmentize" )
+        print ( "Execute CompartmentizeTet" )
         res = context.scene.nrnlauncher.get_swc_filepath(context)
         if res[0] == 0:
-            compartmentize.f_compartmentize(context, res[1])
+            compartmentize_tet.f_compartmentize_tet(context, res[1], context.scene.nrnlauncher.segment_density)
         else:
             raise SystemError(res[1])
 
         return {"FINISHED"}
     
     def invoke ( self, context, event ):
-        print ( "Invoke Compartmentize" )
+        print ( "Invoke CompartmentizeTet" )
         res = context.scene.nrnlauncher.get_swc_filepath(context)
         if res[0] == 0:
-            compartmentize.f_compartmentize(context, res[1])
+            compartmentize_tet.f_compartmentize_tet(context, res[1], context.scene.nrnlauncher.segment_density)
+        else:
+            raise SystemError(res[1])        
+
+        return {"FINISHED"}
+
+# Class to compartmentize by the cylinder method
+class CompartmentizeCyl(bpy.types.Operator):
+    bl_idname = "nrnlauncher.compartmentize_cyl"
+    bl_label = "Compartmentize (Cylinder)"
+
+    def execute ( self, context ):
+        print ( "Execute CompartmentizeCyl" )
+        res = context.scene.nrnlauncher.get_swc_filepath(context)
+        if res[0] == 0:
+            compartmentize_cyl.f_compartmentize_cyl(context, res[1], context.scene.nrnlauncher.segment_density)
+        else:
+            raise SystemError(res[1])
+
+        return {"FINISHED"}
+    
+    def invoke ( self, context, event ):
+        print ( "Invoke CompartmentizeCyl" )
+        res = context.scene.nrnlauncher.get_swc_filepath(context)
+        if res[0] == 0:
+            compartmentize_cyl.f_compartmentize_cyl(context, res[1], context.scene.nrnlauncher.segment_density)
         else:
             raise SystemError(res[1])        
 
@@ -366,7 +394,10 @@ class NeuronLauncherPropGroup(bpy.types.PropertyGroup):
     active_object_index = IntProperty(name="Active Object Index", default=0)
 
     # The explode factor
-    explode_factor = FloatProperty ( default=1.0, precision=1, description="Explode scale factor")
+    explode_factor = FloatProperty ( default=1.0, precision=2, description="Explode scale factor")
+
+    # The density of segments to create
+    segment_density = FloatProperty( default=1.0, precision=2, description="Segment density")
 
     # Booleans for showing things
     show_swc_files = BoolProperty( default = False )
@@ -462,17 +493,21 @@ class NeuronLauncherPropGroup(bpy.types.PropertyGroup):
             row.label("Divide the MCell surface mesh into compartments", icon='PARTICLE_POINT')
 
             row = box.row()
+            row.prop(self, "segment_density", text="Segment density")
+
+            row = box.row()
             split = box.split()
             col = split.column(align=True)
             col.label("Create section and segment compartments")
             col.label("Method: tetrahedralization of the volume (SLOW)")
-            col.operator("nrnlauncher.compartmentize")
+            col.operator("nrnlauncher.compartmentize_tet")
+            col.label("Method: cylinder segmentation (FAST)")
+            col.operator("nrnlauncher.compartmentize_cyl")
 
             row = box.row()
             split = box.split()
             col = split.column(align=True)
             col.label("Create only section compartments")
-            col.label("Method: cylindrical assignments (FAST)")
             col.operator("nrnlauncher.compartmentize_sc_only")
 
             row = box.row()

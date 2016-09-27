@@ -47,7 +47,8 @@ if "bpy" in locals():
     imp.reload(check_bordering_surfaces)
     imp.reload(check_double_assignments)
     imp.reload(color_regions)
-    imp.reload(compartmentize)
+    imp.reload(compartmentize_tet)
+    imp.reload(compartmentize_cyl)
     imp.reload(compartmentize_sc_only)
     imp.reload(explode)
     imp.reload(regions_to_compartments)
@@ -61,7 +62,8 @@ else:
     from . import check_bordering_surfaces
     from . import check_double_assignments
     from . import color_regions
-    from . import compartmentize
+    from . import compartmentize_tet
+    from . import compartmentize_cyl
     from . import compartmentize_sc_only
     from . import explode
     from . import regions_to_compartments

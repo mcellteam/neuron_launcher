@@ -580,7 +580,7 @@ def f_compartmentize_sc_only(context, swc_filepath):
 	for reg in reg_surf_list:
 		reg.name += "_B_surf"
 
-	# Update the boject
+	# Update the object
 	obj_surf.data.update()
 
 	print("> Finished: f_compartmentize_sc_only")
