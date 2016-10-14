@@ -38,7 +38,7 @@ def f_mcell_reg_to_mat(context):
         # Assign a material to each region
         for i_reg in reg_list:
             
-            if len(i_reg.name) == 8 and i_reg.name[0:2] == 'sc':
+            if i_reg.name[0:2] == 'sc':
                 
                 # Deselect all objects currently selected
                 # bpy.ops.object.select_all(action='DESELECT')
@@ -50,16 +50,19 @@ def f_mcell_reg_to_mat(context):
                 bpy.ops.object.material_slot_add()
 
                 # Assign a material to the last slot
-                context.object.material_slots[bpy.context.object.material_slots.__len__() - 1].material = bpy.data.materials.new(name=i_reg.name+"_material")
+                context.object.material_slots[bpy.context.object.material_slots.__len__() - 1].material = bpy.data.materials.new(name=i_reg.name[:14]+"_material")
                 
                 # The name automatically gets something appended to it... change it back to the name we want
-                context.object.material_slots[context.object.material_slots.__len__() - 1].material.name = i_reg.name+"_material"
+                context.object.material_slots[context.object.material_slots.__len__() - 1].material.name = i_reg.name[:14]+"_material"
 
                 #Assign the material on the selected vertices
                 bpy.ops.object.material_slot_assign()
                 
                 # Deselect all vertices
                 bpy.ops.mesh.select_all(action='DESELECT')
+
+        # Return in object mode
+        bpy.ops.object.mode_set(mode='OBJECT')
 
     print("> Finished: f_mcell_reg_to_mat")
 

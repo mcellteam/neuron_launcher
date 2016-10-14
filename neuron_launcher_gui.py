@@ -36,6 +36,9 @@ from . import explode
 # Convert two objects (surface and segments) into individual compartment objects
 from . import regions_to_compartments
 
+# Visualize voltage data using the timeline
+from . import timeline_voltage
+
 import os
 
 # Register
@@ -60,6 +63,12 @@ class NeuronLauncherVizPanel(bpy.types.Panel):
     def draw(self, context):
         context.scene.nrnlauncher.draw ( self.layout )
 
+#######################################################
+#######################################################
+# Class to set cable model
+#######################################################
+#######################################################
+
 # Class to pick a file to set the cable model
 class SetSWCFilePicker(bpy.types.Operator, ImportHelper):
     bl_idname = "nrnlauncher.set_swc_data_picker"
@@ -80,6 +89,12 @@ class SetSWCFilePicker(bpy.types.Operator, ImportHelper):
     def invoke(self, context, event):
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
+
+#######################################################
+#######################################################
+# Classes to fix geometry/assign surface regions
+#######################################################
+#######################################################
 
 # Class to close open caps
 class CloseOpenCaps(bpy.types.Operator):
@@ -169,9 +184,82 @@ class CheckDoubleAssignments(bpy.types.Operator):
 
 #######################################################
 #######################################################
-# Materials and colors
+# Visualization of voltages, materials and colors
 #######################################################
 #######################################################
+
+# Appending 'fn' to 'fn_list',
+# Remove any functions from with a matching name & module.
+def append_function_unique(fn_list, fn):
+    fn_name = fn.__name__
+    fn_module = fn.__module__
+    for i in range(len(fn_list) - 1, -1, -1):
+        if fn_list[i].__name__ == fn_name and fn_list[i].__module__ == fn_module:
+            del fn_list[i]
+    fn_list.append(fn)
+
+# Every frame change, this function is called.
+def timeline_voltage_handler(scene):
+    frame = scene.frame_current
+    timeline_voltage.f_timeline_voltage(scene, frame)
+
+# Class to read voltage data
+class VoltageTimeline(bpy.types.Operator, ImportHelper):
+    bl_idname = "nrnlauncher.voltage_timeline"
+    bl_label = "Read voltage data for timeline"
+
+    filepath = bpy.props.StringProperty(subtype='FILE_PATH', default="")
+    directory = bpy.props.StringProperty(subtype='DIR_PATH')
+
+    filename_ext = "." # allowed extensions
+    use_filter_folder = True # only select folders
+
+    def execute ( self, context ):
+        print ( "Execute VoltageTimeline" )
+
+        # Make sure it's a filepath, not a file
+        if not (os.path.isdir(self.directory)):
+            msg = "Please select a directory not a file\n" + self.directory
+            self.report({'WARNING'}, msg)
+
+        # Store the voltage directory
+        mesh_list = context.scene.nrnlauncher.mesh_obj_list
+        if len(mesh_list) > 0:
+            f_list = os.listdir(self.directory)
+            if len(f_list) > 0:
+
+                # Check if the selected object is already in the list
+                ob = context.scene.objects.active
+                name_list = [item.name for item in mesh_list]
+                if not ob.name in name_list:
+                    context.scene.nrnlauncher.add_mesh_object(context)
+                    name_list = [item.name for item in context.scene.nrnlauncher.mesh_obj_list]
+
+                context.scene.nrnlauncher.active_object_index = name_list.index(ob.name)
+                ac = context.scene.nrnlauncher.active_object_index                    
+                mesh_list[ac].v_dir = self.directory
+                mesh_list[ac].v_zero_pad = len(f_list[0])-6
+                mesh_list[ac].v_n_files = len(f_list)
+
+        # Append frame change handler
+        append_function_unique(bpy.app.handlers.frame_change_post, timeline_voltage_handler)
+        # Delete all other handlers and append
+        # bpy.app.handlers.frame_change_pre.clear()
+        # bpy.app.handlers.frame_change_pre.append(timeline_voltage_handler)
+
+        color_regions.f_mcell_reg_to_mat(context)
+
+        # Trigger a frame update to draw the first time
+        frame = context.scene.frame_current
+        timeline_voltage.f_timeline_voltage(context.scene, frame)
+
+        return {"FINISHED"}
+    
+    def invoke ( self, context, event ):
+        print ( "Invoke VoltageTimeline" )
+        context.window_manager.fileselect_add(self)
+
+        return {'RUNNING_MODAL'}
 
 # Class to make a material for each MCell region
 class MCellRegionsToMaterials(bpy.types.Operator):
@@ -338,6 +426,10 @@ class NeuronLauncherMeshObject(bpy.types.PropertyGroup):
     swc_filename = StringProperty ( name="SWC filename", default="", description="SWC filename" )
     swc_filepath = StringProperty ( name="SWC filepath", default="", description="SWC filepath" )
 
+    v_dir = StringProperty(name="Voltage directory", default="", description="Voltage directory")
+    v_zero_pad = IntProperty(name="Zero padding for voltage files", default=1)
+    v_n_files = IntProperty(name = "Number of voltage data files", default=0)
+
     # Draw in list of objects
     def draw_item_in_row ( self, row ):
         col = row.column()
@@ -384,7 +476,6 @@ class NeuronLauncherObjectRemoveAll(bpy.types.Operator):
     def execute(self, context):
         context.scene.nrnlauncher.remove_all_mesh_objects(context)
         return {'FINISHED'}
-
 
 # Class for context that contains all the functions
 class NeuronLauncherPropGroup(bpy.types.PropertyGroup):
@@ -535,6 +626,12 @@ class NeuronLauncherPropGroup(bpy.types.PropertyGroup):
             row.prop(self, "show_material_tools", icon='TRIA_RIGHT', text="Visualisation Tools", emboss=False)
         else:
             row.prop(self, "show_material_tools", icon='TRIA_DOWN', text="Visualisation Tools", emboss=False)
+
+            row = box.row()
+            row.label("Volage visualization", icon='SEQUENCE')
+
+            row = box.row()
+            row.operator("nrnlauncher.voltage_timeline")
 
             row = box.row()
             row.label("Materials and Colors", icon='COLOR')
