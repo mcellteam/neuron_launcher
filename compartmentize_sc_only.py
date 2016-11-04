@@ -203,6 +203,18 @@ def get_connections(fname):
 			line_data.append(int(float(line_s[6])))
 			swc_data.append(line_data)
 
+	# VERY IMPORTANT: DETERMINE HOW MANY ZEROS THERE ARE => ZERO PADDING
+	zero_pad = len(str(len(swc_data)))
+	zero_cmmnd = "%0"+ str(zero_pad) +"d"
+	sc_name_length = 4 + (2*zero_pad)
+	sg_name_length = sc_name_length + 7
+	sc_id1_1 = 3
+	sc_id1_2 = 3+zero_pad
+	sc_id2_1 = 3+zero_pad+1
+	sc_id2_2 = 3+zero_pad+1+zero_pad
+	sg_id_1 = 3+zero_pad+1+zero_pad+4
+	sg_id_2 = 3+zero_pad+1+zero_pad+7
+
 	# Find connections
 	pt_connect = []
 	for i in range(0,len(swc_data)):
@@ -224,7 +236,7 @@ def get_connections(fname):
 		for pt2 in sublist:
 			if pt2 > pt1:
 				# New section
-				sec_name = "sc_%02d_%02d"%(pt1,pt2)
+				sec_name = ("sc_" + zero_cmmnd + "_" + zero_cmmnd)%(pt1,pt2)
 				sec_ids = (pt1,pt2)
 				sec_pts = (Vector(swc_data[pt1-1][2:5]),Vector(swc_data[pt2-1][2:5]))
 				
@@ -241,7 +253,7 @@ def get_connections(fname):
 				sec = MN_section(name=sec_name, sc_id=sec_ids, sc_pts=sec_pts, nghbr_sc_ids=(nghbrs_min,nghbrs_max))
 				mn_section_dict[sec_ids] = sec
 
-	return
+	return zero_pad, zero_cmmnd, sc_name_length, sg_name_length, sc_id1_1, sc_id1_2, sc_id2_1, sc_id2_2, sg_id_1, sg_id_2
 
 
 # Make an object from a list of faces (INDEXES) in another object
@@ -306,7 +318,7 @@ def f_compartmentize_sc_only(context, swc_filepath):
 	t_st.append(time.time())
 
 	# Get data from the SWC file
-	get_connections(swc_filepath)
+	zero_pad, zero_cmmnd, sc_name_length, sg_name_length, sc_id1_1, sc_id1_2, sc_id2_1, sc_id2_2, sg_id_1, sg_id_2 = get_connections(swc_filepath)
 
 	# Get the active object
 	ob_list = context.selected_objects
@@ -338,11 +350,11 @@ def f_compartmentize_sc_only(context, swc_filepath):
 		sec_name = sec.name
 		
 		# Check that it is a section
-		if len(sec_name) == 8 and sec_name[0:3] == 'sc_':
+		if len(sec_name) == sc_name_length and sec_name[0:3] == 'sc_':
 			
 			# Get the vert indeces
-			pt1 = int(sec_name[3:5])
-			pt2 = int(sec_name[6:8])
+			pt1 = int(sec_name[sc_id1_1:sc_id1_2])
+			pt2 = int(sec_name[sc_id2_1:sc_id2_2])
 			pt_min = min(pt1,pt2)
 			pt_max = max(pt1,pt2)
 
