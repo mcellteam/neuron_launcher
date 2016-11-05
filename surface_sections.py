@@ -68,6 +68,9 @@ def get_connections(fname):
     # Vertex coordinates
     vert_list = [Vector(item[2:5]) for item in swc_data]
 
+    # Radius list
+    r_list = [item[5] for item in swc_data]
+
     # Find connections
     pt_connect = []
     for i in range(0,len(swc_data)):
@@ -83,7 +86,7 @@ def get_connections(fname):
         for idx in sub_list:
             pt_connect[idx-1].append(i_list+1)
 
-    return pt_connect, vert_list
+    return pt_connect, vert_list, r_list
 
 # Function to construct a neighbour list from a list of face vertices
 '''
@@ -193,7 +196,7 @@ def f_surface_sections(context, swc_filepath):
     print("> Running: f_surface_sections")
 
     # Get data from the SWC file
-    pt_connect, vert_co_list = get_connections(swc_filepath)
+    pt_connect, vert_co_list, vert_r_list = get_connections(swc_filepath)
     
     # Construct dividing planes
     normal_dict = construct_dividing_plane_normals(pt_connect, vert_co_list)
@@ -206,6 +209,16 @@ def f_surface_sections(context, swc_filepath):
             # Check against duplicates
             if conn_pt > i_pt + 1:
                 sec_list.append((i_pt+1,conn_pt))
+
+    # ORDER the sections by average radius of the two vertices, in decreasing order
+    # That is, assign faces to large radius sections first, as these deserve "more" faces
+    sec_r_list = []
+    for v_pair in sec_list:
+        r_ave = 0.5*(vert_r_list[v_pair[0]-1] + vert_r_list[v_pair[1]-1])
+        sec_r_list.append(r_ave)
+
+    # Zipped sort
+    sec_r_list, sec_list = (list(t) for t in zip(*sorted(zip(sec_r_list, sec_list),reverse=True)))
 
     # Get the object
     ob_list = context.selected_objects

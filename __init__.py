@@ -44,8 +44,9 @@ if "bpy" in locals():
     imp.reload(neuron_launcher_gui)
     imp.reload(close_open_caps)
     imp.reload(surface_sections)
-    imp.reload(check_bordering_surfaces)
+    imp.reload(check_connectivity)
     imp.reload(check_double_assignments)
+    imp.reload(check_unassigned_faces)
     imp.reload(color_regions)
     imp.reload(compartmentize_tet)
     imp.reload(compartmentize_cyl)
@@ -60,8 +61,9 @@ else:
     from . import neuron_launcher_gui
     from . import close_open_caps
     from . import surface_sections
-    from . import check_bordering_surfaces
+    from . import check_connectivity
     from . import check_double_assignments
+    from . import check_unassigned_faces
     from . import color_regions
     from . import compartmentize_tet
     from . import compartmentize_cyl

@@ -13,10 +13,13 @@ from . import close_open_caps
 from . import surface_sections
 
 # Check for faces that may border other faces in regions not allowed by the connectivity of the SWC file
-from . import check_bordering_surfaces
+from . import check_connectivity
 
 # Check for faces that may be falsely assigned to two regions
 from . import check_double_assignments
+
+# Check for unassigned faces
+from . import check_unassigned_faces
 
 # Color regions randomly
 from . import color_regions
@@ -143,25 +146,25 @@ class MakeSurfaceRegions(bpy.types.Operator):
 #######################################################
 
 # Class to check the neighbors of faces against the connections in the cable model
-class CheckBorderingFacesRegions(bpy.types.Operator):
-    bl_idname = "nrnlauncher.check_bordering_faces_regions"
-    bl_label = "Check bordering surface assignments"
+class CheckConnectivityFacesRegions(bpy.types.Operator):
+    bl_idname = "nrnlauncher.check_connectivity"
+    bl_label = "Check surface assignments against SWC connectivity"
 
     def execute ( self, context ):
-        print ( "Execute CheckBorderingFacesRegions" )
+        print ( "Execute CheckConnectivityFacesRegions" )
         res = context.scene.nrnlauncher.get_swc_filepath(context)
         if res[0] == 0:
-            check_bordering_surfaces.f_check_bordering_surfaces(context, res[1])
+            check_connectivity.f_check_connectivity(context, res[1])
         else:
             raise SystemError(res[1])
 
         return {"FINISHED"}
     
     def invoke ( self, context, event ):
-        print ( "Invoke CheckBorderingFacesRegions" )
+        print ( "Invoke CheckConnectivityFacesRegions" )
         res = context.scene.nrnlauncher.get_swc_filepath(context)
         if res[0] == 0:
-            check_bordering_surfaces.f_check_bordering_surfaces(context, res[1])
+            check_connectivity.f_check_connectivity(context, res[1])
         else:
             raise SystemError(res[1])
 
@@ -180,6 +183,36 @@ class CheckDoubleAssignments(bpy.types.Operator):
     def invoke ( self, context, event ):
         print ( "Invoke CheckDoubleAssignments" )
         check_double_assignments.f_check_double_assignments(context)
+        return {"FINISHED"}
+
+# Class to check for unassigned faces
+class CheckUnassignedFaces(bpy.types.Operator):
+    bl_idname = "nrnlauncher.check_unassigned_faces"
+    bl_label = "Check for unassigned faces"
+
+    def execute ( self, context ):
+        print ( "Execute CheckUnassignedFaces" )
+        check_unassigned_faces.f_check_unassigned_faces(context, False)
+        return {"FINISHED"}
+    
+    def invoke ( self, context, event ):
+        print ( "Invoke CheckUnassignedFaces" )
+        check_unassigned_faces.f_check_unassigned_faces(context, False)
+        return {"FINISHED"}
+
+# Class to select unassigned linked faces
+class SelectUnassignedLinkedFaces(bpy.types.Operator):
+    bl_idname = "nrnlauncher.select_unassigned_linked_faces"
+    bl_label = "Select unassigned linked faces"
+
+    def execute ( self, context ):
+        print ( "Execute SelectUnassignedLinkedFaces" )
+        check_unassigned_faces.f_select_unassigned_linked_faces(context)
+        return {"FINISHED"}
+    
+    def invoke ( self, context, event ):
+        print ( "Invoke SelectUnassignedLinkedFaces" )
+        check_unassigned_faces.f_select_unassigned_linked_faces(context)
         return {"FINISHED"}
 
 #######################################################
@@ -564,8 +597,10 @@ class NeuronLauncherPropGroup(bpy.types.PropertyGroup):
             split = box.split()
             col = split.column(align=True)
             col.label("Check surface region assignments")
-            col.operator("nrnlauncher.check_bordering_faces_regions")
+            col.operator("nrnlauncher.check_connectivity")
             col.operator("nrnlauncher.check_double_assignments")
+            col.operator("nrnlauncher.check_unassigned_faces")
+            col.operator("nrnlauncher.select_unassigned_linked_faces")
 
         ###
         # Tools to divide a surface mesh into compartments
