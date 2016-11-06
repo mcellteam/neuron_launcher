@@ -42,6 +42,26 @@ class MakeNeuronStick_Operator ( bpy.types.Operator ):
 		mnm.build_neuron_stick_from_file ( context )
 		return {"FINISHED"}
 
+# Class to update the cable model post editing it
+class UpdateCablePostEdit_Operator( bpy.types.Operator ):
+	bl_idname = "mnm.update_cable_post_edit"
+	bl_label = "Update cable model from geometry"
+	bl_description = "Update the internal cable model from the current geometry"
+	bl_options = {"REGISTER", "UNDO"}
+	bl_space_type = "PROPERTIES"
+	bl_region_type = "WINDOW"
+	bl_context = "objectmode"
+
+	def execute ( self, context ):
+		mnm = context.scene.make_neuron_meta
+		mnm.check_duplicate_verts ( context )
+		return {"FINISHED"}
+
+	def invoke ( self, context, event ):
+		mnm = context.scene.make_neuron_meta
+		mnm.check_duplicate_verts ( context )
+		return {"FINISHED"}
+
 # Class to make spheres
 class MakeSpheres_Operator( bpy.types.Operator ):
 	bl_idname = "mnm.make_spheres"
@@ -317,6 +337,9 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 			row.operator ( "mnm.make_line_mesh" )
 
 			row = box.row()
+			row.operator( "mnm.update_cable_post_edit" )
+
+			row = box.row()
 			split = box.split()
 			col = split.column(align=True)
 			col.operator ( "mnm.make_spheres" )
@@ -370,8 +393,8 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 		idx_vals = [index_number_layer.data[i].value for i in range(0,n_v)]
 
 		# Check against duplicates
-		if len(idx_vals) != len(set(idx_vals)):
-			# Duplicates exist
+		if len(idx_vals) != len(set(idx_vals)) or len(idx_vals) != max(idx_vals):
+			# Duplicates exist OR deletion has occurred
 			self.update_cable_model_post_extrusion(context)
 
 		# No duplicates
@@ -447,6 +470,17 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 
 			# Delete this vertex to check
 			del verts_check[0]
+
+		# Do spheres already exist
+		v_name = "%0"+str(len(str(n_v)))+"d"
+		sphere_name = ("Vertex_" + v_name) % 1
+		if not bpy.data.objects.get(sphere_name) is None:
+			# Delete and remake all the spheres, since names changed
+			self.delete_vertex_spheres(context)
+			self.make_spheres_from_object(context)
+
+			# POSSIBLE TO-DO HERE: PRESERVE THE RADIUS OF EXISTING SPHERES
+			# Grab their radii, and upload onto the new spheres
 
 	# Add spheres to the cable model for visualizing the vertices
 	def make_spheres_from_object( self, context ):

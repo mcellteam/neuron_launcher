@@ -67,7 +67,7 @@ def f_mcell_reg_to_mat(context):
     print("> Finished: f_mcell_reg_to_mat")
 
 # Color regions blue
-def f_color_regions(context):
+def f_color_regions(context, col1, col2):
 
     print("> Running: f_color_regions")
 
@@ -81,7 +81,7 @@ def f_color_regions(context):
         mat_list = [item.material for item in context.object.material_slots]
         for mat in mat_list:
             i = random.random()
-            mat.diffuse_color = (0.0,i,1.0-i)
+            mat.diffuse_color = (col1[0]+i*(col2[0]-col1[0]),col1[1]+i*(col2[1]-col1[1]),col1[2]+i*(col2[2]-col1[2]))
             mat.use_transparency = True
             mat.transparency_method = 'MASK'
             mat.alpha = 0.4

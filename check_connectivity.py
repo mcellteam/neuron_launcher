@@ -155,7 +155,7 @@ def f_check_connectivity(context, swc_filepath):
         # Print and inform!
         if len(bad_regs) > 0:
             print("")
-            print("Region: " + str(reg.name))
+            print("ERROR: Region: " + str(reg.name))
             print("illegally borders the following:")
             for brdr_name in bad_regs:
                 print("-N- " + str(brdr_name))
@@ -165,8 +165,8 @@ def f_check_connectivity(context, swc_filepath):
             print("")
         if len(missed_regs) > 0:
             print("")
-            print("Region: " + str(reg.name))
-            print("fails to border the following:")
+            print("WARNING: Region: " + str(reg.name))
+            print("fails to border the following (this may or may not be ok):")
             for missed_name in missed_regs:
                 print("-F- " + str(missed_name))
             print("")

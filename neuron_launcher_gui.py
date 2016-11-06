@@ -316,12 +316,12 @@ class ColorRegions(bpy.types.Operator):
 
     def execute ( self, context ):
         print ( "Execute ColorRegions" )
-        color_regions.f_color_regions(context)
+        color_regions.f_color_regions(context, context.scene.nrnlauncher.color_1, context.scene.nrnlauncher.color_2)
         return {"FINISHED"}
     
     def invoke ( self, context, event ):
         print ( "Invoke ColorRegions" )
-        color_regions.f_color_regions(context)
+        color_regions.f_color_regions(context, context.scene.nrnlauncher.color_1, context.scene.nrnlauncher.color_2)
         return {"FINISHED"}
 
 #######################################################
@@ -529,6 +529,10 @@ class NeuronLauncherPropGroup(bpy.types.PropertyGroup):
     show_compartmentize_tools = BoolProperty( default = False )
     show_material_tools = BoolProperty( default = False )
 
+    # Colors for random coloring
+    color_1 = FloatVectorProperty(name="color_1", description="Color 1", default=(0.0,0.0,1.0), subtype='COLOR')
+    color_2 = FloatVectorProperty(name="color_2", description="Color 2", default=(0.0,1.0,0.0), subtype='COLOR')
+
     # Draw
     def draw(self,layout):
 
@@ -675,7 +679,12 @@ class NeuronLauncherPropGroup(bpy.types.PropertyGroup):
             row.operator("nrnlauncher.mcell_regions_to_materials")
 
             row = box.row()
-            row.operator("nrnlauncher.color_regions")
+            split = box.split()
+            col = split.column(align=True)
+            col.operator("nrnlauncher.color_regions")
+            rw = col.row()
+            rw.prop ( self, "color_1", text="" )
+            rw.prop ( self, "color_2", text="" )
 
     #####
     # Function to set the SWC file for a selected mesh object
