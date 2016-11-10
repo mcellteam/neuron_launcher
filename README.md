@@ -7,11 +7,13 @@ Blender, CellBlender, and possible MeshPy based on the usage scenario.
 
 ## Installation
 
-The default method for installing Blender add-ons suffices:
+NeuronLauncher requires [MeshPy](https://mathema.tician.de/software/meshpy/), which is contained here for convenience along with a simple install script.
 
-	Download/Clone the repo as a compressed zip file
-	In Blender, under User Preferences > Add-ons click "Install from File"
-	Remember to activate the Plug-In
+	Download/Clone the repo
+	Install MeshPy if necessary by running:
+	sh install_meshpy.sh
+	Install NeuronLauncher by running:
+	sh install_neuron_launcher.sh
 
 ## Model Creation
 
