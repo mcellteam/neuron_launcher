@@ -16,4 +16,4 @@ The workflow proceeds as follows:
 * **Close the surface mesh:** this may be done using the ["close an open mesh"](../closing_mesh) tool.
 * **Assign surface regions:** this may be done using the ["assign surface regions"](../assigning_surface_regions) tool
 * **Create volumetric compartments from the surface mesh:** this may be done using the ["compartmentalize"](../creating_compartments) tools.
-* **Visualisation:** some tools for visualisation are included under ["visualising exploding sections"](../visualising_exploding_sections).
+* **Visualisation:** some tools for visualisation are included under ["visualising exploding sections"](../visualising).
