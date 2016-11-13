@@ -3,7 +3,7 @@ Set of tools in Blender to create models for MCell/NEURON hybrid simulations
 
 ## Requirements
 
-Blender, CellBlender, and possible MeshPy based on the usage scenario.
+Blender, CellBlender, and MeshPy based on the usage scenario. MeshPy is included in this repo - CellBlender can be found [here](https://github.com/mcellteam/cellblender).
 
 ## Installation
 
