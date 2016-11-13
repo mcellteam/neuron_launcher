@@ -473,7 +473,7 @@ class NeuronLauncherMeshObject(bpy.types.PropertyGroup):
 # Model object item to draw in the list
 class NeuronLauncher_UL_object(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
-        # The item will be a NeuronLauncherObjectPropertyGroup
+        # The item will be a NeuronLauncherMeshObject
         # Let it draw itself in a new row:
         item.draw_item_in_row ( layout.row() )
 
@@ -509,6 +509,12 @@ class NeuronLauncherObjectRemoveAll(bpy.types.Operator):
     def execute(self, context):
         context.scene.nrnlauncher.remove_all_mesh_objects(context)
         return {'FINISHED'}
+
+#######################################################
+#######################################################
+# Main GUI property group
+#######################################################
+#######################################################
 
 # Class for context that contains all the functions
 class NeuronLauncherPropGroup(bpy.types.PropertyGroup):
@@ -737,9 +743,8 @@ class NeuronLauncherPropGroup(bpy.types.PropertyGroup):
         print("Removing mesh object from the list")
 
         self.mesh_obj_list.remove ( self.active_object_index )
-        self.active_object_index -= 1
-        if self.active_object_index < 0:
-            self.active_object_index = 0
+        if self.active_object_index > 0:
+            self.active_object_index -= 1
 
     # Remove all mesh objects
     def remove_all_mesh_objects(self, context):
