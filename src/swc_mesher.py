@@ -42,6 +42,14 @@ class MakeNeuronStick_Operator ( bpy.types.Operator ):
 		context.scene.make_neuron_meta.build_neuron_stick_from_file ( context )
 		return {"FINISHED"}
 
+
+#######################################################
+#######################################################
+# Operators to update a cable model from recent edits
+#######################################################
+#######################################################
+
+
 # Class to update the cable model post editing it
 class UpdateCablePostEdit_Operator( bpy.types.Operator ):
 	bl_idname = "mnm.update_cable_from_cable"
@@ -59,6 +67,48 @@ class UpdateCablePostEdit_Operator( bpy.types.Operator ):
 	def invoke ( self, context, event ):
 		context.scene.make_neuron_meta.check_duplicate_verts ( context )
 		return {"FINISHED"}
+
+
+#######################################################
+#######################################################
+# Operators to export SWC file
+#######################################################
+#######################################################
+
+
+# Export a cable model to SWC file
+class ExportCableModel_Operator ( bpy.types.Operator , ExportHelper ):
+	bl_idname = "mnm.export_swc"
+	bl_label = "Export Cable Model to SWC file"
+	bl_description = "Generate an SWC file of segments from the skeleton"
+	
+	filepath = bpy.props.StringProperty(subtype='FILE_PATH', default="")
+
+	filename_ext = ".swc" # allowed extensions
+
+	def execute ( self, context ):
+
+		# Check that an object is selected
+		if context.scene.objects.active == None:
+			raise TypeError("Please select the cable model to export.")
+
+		# Export the SWC file
+		context.scene.make_neuron_meta.export_cable_model(context, self.filepath)
+
+		return {"FINISHED"}
+
+	def invoke ( self, context, event ):
+
+		context.window_manager.fileselect_add(self)
+		return {'RUNNING_MODAL'}
+
+
+#######################################################
+#######################################################
+# Operators to edit cable model spheres
+#######################################################
+#######################################################
+
 
 # Class to make spheres
 class MakeSpheres_Operator( bpy.types.Operator ):
@@ -95,32 +145,6 @@ class UpdateCableFromSpheres_Operator( bpy.types.Operator ):
 	def invoke ( self, context, event ):
 		context.scene.make_neuron_meta.update_cable_model_from_spheres ( context )
 		return {"FINISHED"}
-
-# Export a cable model to SWC file
-class ExportCableModel_Operator ( bpy.types.Operator , ExportHelper ):
-	bl_idname = "mnm.export_swc"
-	bl_label = "Export Cable Model to SWC file"
-	bl_description = "Generate an SWC file of segments from the skeleton"
-	
-	filepath = bpy.props.StringProperty(subtype='FILE_PATH', default="")
-
-	filename_ext = ".swc" # allowed extensions
-
-	def execute ( self, context ):
-
-		# Check that an object is selected
-		if context.scene.objects.active == None:
-			raise TypeError("Please select the cable model to export.")
-
-		# Export the SWC file
-		context.scene.make_neuron_meta.export_cable_model(context, self.filepath)
-
-		return {"FINISHED"}
-
-	def invoke ( self, context, event ):
-
-		context.window_manager.fileselect_add(self)
-		return {'RUNNING_MODAL'}
 
 # Class to show all vertex spheres
 class ShowVertexSpheres_Operator( bpy.types.Operator ):
@@ -242,7 +266,7 @@ class CableModelRemoveAll(bpy.types.Operator):
 #######################################################
 
 
-class MakeNeuronMeta_Operator ( bpy.types.Operator ):
+class MakeNeuronMetaFile_Operator ( bpy.types.Operator ):
 	bl_idname = "mnm.make_neuron_from_file"
 	bl_label = "Make Surface Mesh from File"
 	bl_description = "Generate a surface mesh from the SWC file"
@@ -263,7 +287,7 @@ class MakeNeuronMeta_Operator ( bpy.types.Operator ):
 		mnm.build_neuron_meta_from_segments ( context, segments )
 		return {"FINISHED"}
 
-class MakeNeuronMeta_Operator ( bpy.types.Operator ):
+class MakeNeuronMetaData_Operator ( bpy.types.Operator ):
 	bl_idname = "mnm.make_neuron_from_data"
 	bl_label = "Make Surface Mesh from Cable Model"
 	bl_description = "Generate a surface mesh from the current skeleton"
@@ -435,27 +459,29 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 
 			# Apply edits to cable model
 
-			row = subbox.row()
-			row.operator( "mnm.update_cable_from_cable" )
+			split = subbox.split()
+			col = split.column(align=True)
+			col.label("After editing the geometry:")
+			col.operator( "mnm.update_cable_from_cable" )
 
 			# Make spheres
 
 			row = subbox.row()
 			split = subbox.split()
 			col = split.column(align=True)
+			col.label("To edit the radii:")
 			col.operator ( "mnm.make_spheres" )
 			rw = col.row()
 			rw.operator("mnm.show_spheres")
 			rw.operator("mnm.hide_spheres")
 			rw.operator("mnm.delete_all_spheres")
-
-			# Apply edits to cable model from spheres
-
-			row = subbox.row()
-			row.operator ( "mnm.update_cable_from_spheres" )
+			col.label("After editing the radii:")
+			col.operator ( "mnm.update_cable_from_spheres" )
 
 			row = subbox.row()
-			row.operator ( "mnm.export_swc" )
+			split = subbox.split()
+			col = split.column(align=True)
+			col.operator ( "mnm.export_swc" )
 
 			###
 			# Extrapolate surface mesh from cable model
@@ -545,15 +571,17 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 		idx_vals = [index_number_layer.data[i].value for i in range(0,n_v)]
 
 		# Check against duplicates
-		if len(idx_vals) != len(set(idx_vals)) or len(idx_vals) != max(idx_vals):
+		if len(idx_vals) != len(set(idx_vals)) or len(idx_vals) != max(idx_vals) or n_v != len(idx_vals) or n_v != max(idx_vals):
 			# Duplicates exist OR deletion has occurred
-			self.update_cable_model_post_extrusion(context)
+			self.update_cable_model_post_edit(context)
 
 		# No duplicates
 		return
 
 	# Update cable model post extrusion/deletion
-	def update_cable_model_post_extrusion( self, context ):
+	def update_cable_model_post_edit( self, context ):
+
+		print("Updating cable model post editing.")
 
 		# Try to get the object
 		if not len(self.cable_model_list) > 0:
@@ -572,11 +600,13 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 		# Get the idxs
 		index_number_layer = ob.data.vertex_layers_float['index_number']
 
-		# We need to start somewhere - choose the idx = 1 element to be the same
-		# Find the idx = 1 element
+		# We need to start somewhere - pick any vertex to index number 1
+		# Reassign the vertex i_start=0 to have index 1
+		i_start = 0
+		index_number_layer.data[i_start].value = 1
+
+		# Number of vertices
 		n_v = len(ob.data.vertices)
-		idx_vals = [int(index_number_layer.data[i].value) for i in range(0,n_v)]
-		i_start = idx_vals.index(1)
 
 		# All vertices to check
 		verts_check = [i_start]
@@ -623,6 +653,17 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 
 			# Delete this vertex to check
 			del verts_check[0]
+
+		# Delete all other data in the float layers, if any exists
+		radius_layer = ob.data.vertex_layers_float['radius']
+		n_v_new = len(i_idx_dict)
+		for i_v in range(n_v_new,n_v):
+			if i_v in index_number_layer.data:
+				del index_number_layer.data[i_v]
+			if i_v in parent_index_layer.data:
+				del parent_index_layer.data[i_v]
+			if i_v in radius_layer.data:
+				del radius_layer.data[i_v]
 
 		# Do spheres already exist
 		v_name = "%0"+str(len(str(n_v)))+"d"
@@ -846,85 +887,91 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 		# Read in the data
 		segments = []
 		
-		print ( "Reading from active object" )
+		# Read from the selected cable model in the list
 
-		if context.scene.objects.active == None:
-			print ( "Select a mesh object to make active" )
-		elif context.scene.objects.active.type != 'MESH':
-			print ( "Active object is not a mesh" )
-		else:
-			obj = context.scene.objects.active
-			mesh = obj.data
-			verts = mesh.vertices
-			print ( "Mesh has " + str(len(verts)) + " verts" )
+		# Try to get the object
+		if not len(self.cable_model_list) > 0:
+			raise TypeError("List of cable models to edit is empty.")
 
-			index_number_layer = mesh.vertex_layers_float['index_number']
-			parent_index_layer = mesh.vertex_layers_float['parent_index']
-			segment_type_layer = mesh.vertex_layers_float['segment_type']
-			#packed_layer = mesh.vertex_layers_int['packed_data']
-			radius_layer = mesh.vertex_layers_float['radius']
+		# Get the object
+		obj_name = (self.cable_model_list[self.active_object_index]).name
+		obj = bpy.data.objects[obj_name]
 
-			self.num_nodes_in_object = 0
-			num_total_segments = 0
+		# Make sure it's active and selected
+		context.scene.objects.active = obj
+		obj.select = True
 
-			# Start by putting all points into a dictionary keyed by their label n
+		mesh = obj.data
+		verts = mesh.vertices
+		print ( "Mesh has " + str(len(verts)) + " verts" )
 
-			point_dict = {}
-			i = 0
-			for v in verts:
-				# Fields: n T x y z R P
+		index_number_layer = mesh.vertex_layers_float['index_number']
+		parent_index_layer = mesh.vertex_layers_float['parent_index']
+		segment_type_layer = mesh.vertex_layers_float['segment_type']
+		#packed_layer = mesh.vertex_layers_int['packed_data']
+		radius_layer = mesh.vertex_layers_float['radius']
 
-				n = int(index_number_layer.data[i].value)
-				# n = (packed_layer.data[i].value >> 17) & 0x03fff
-				T = int(segment_type_layer.data[i].value)
-				# T = packed_layer.data[i].value & 0x07
-				x = v.co.x
-				y = v.co.y
-				z = v.co.z
-				R = radius_layer.data[i].value
-				P = int(parent_index_layer.data[i].value)
-				# P = (packed_layer.data[i].value >> 3) & 0x03fff
+		self.num_nodes_in_object = 0
+		num_total_segments = 0
 
-				# For some reason, many of these fields need to be swapped!!
+		# Start by putting all points into a dictionary keyed by their label n
 
-				#fields = [ str(int(P)), str(int(T)), str(x), str(y), str(z), str(int(n)), str(R) ]
-				fields  = [ str(int(n)), str(int(T)), str(x), str(y), str(z), str(R), str(int(P)) ]
+		point_dict = {}
+		i = 0
+		for v in verts:
+			# Fields: n T x y z R P
 
-				print ( "  Fields from " + obj.name + " = " + str(fields) )
-				point_dict[fields[0]] = fields
-				i += 1
+			n = int(index_number_layer.data[i].value)
+			# n = (packed_layer.data[i].value >> 17) & 0x03fff
+			T = int(segment_type_layer.data[i].value)
+			# T = packed_layer.data[i].value & 0x07
+			x = v.co.x
+			y = v.co.y
+			z = v.co.z
+			R = radius_layer.data[i].value
+			P = int(parent_index_layer.data[i].value)
+			# P = (packed_layer.data[i].value >> 3) & 0x03fff
 
-			sorted_int_keys = sorted ( [ int(k) for k in point_dict.keys() ] )
-			point_keys = ( [ str(k) for k in sorted_int_keys ] )
-			self.num_lines_in_file = len(point_keys)
-			self.num_nodes_in_file = len(point_keys)
+			# For some reason, many of these fields need to be swapped!!
 
-			# Next create the list of segments - one for each child that has a parent
-			for k in point_keys:
-				child_fields = point_dict[k]
-				print ( "  Sorted Fields from " + obj.name + " = " + str(child_fields) )
-				if child_fields[6] in point_keys:
-					# This point has a parent, so make a segment from parent to child
-					parent_fields = point_dict[child_fields[6]]
-					px = float(parent_fields[2])
-					py = float(parent_fields[3])
-					pz = float(parent_fields[4])
-					pr = float(parent_fields[5])
-					cx = float(child_fields[2])
-					cy = float(child_fields[3])
-					cz = float(child_fields[4])
-					cr = float(child_fields[5])
-					segments = segments + [ [ [px, py, pz, pr], [cx, cy, cz, cr] ] ]
-					num_total_segments += 1
+			#fields = [ str(int(P)), str(int(T)), str(x), str(y), str(z), str(int(n)), str(R) ]
+			fields  = [ str(int(n)), str(int(T)), str(x), str(y), str(z), str(R), str(int(P)) ]
 
-			if self.num_segs_limit > 0:
-				# Limit the number of segments
-				segments = segments[0:self.num_segs_limit]
-				num_total_segments = len(segments)
+			print ( "  Fields from " + obj.name + " = " + str(fields) )
+			point_dict[fields[0]] = fields
+			i += 1
 
-			self.num_segments_in_file = num_total_segments
+		sorted_int_keys = sorted ( [ int(k) for k in point_dict.keys() ] )
+		point_keys = ( [ str(k) for k in sorted_int_keys ] )
+		self.num_lines_in_file = len(point_keys)
+		self.num_nodes_in_file = len(point_keys)
 
-			self.perform_analysis ( segments )
+		# Next create the list of segments - one for each child that has a parent
+		for k in point_keys:
+			child_fields = point_dict[k]
+			print ( "  Sorted Fields from " + obj.name + " = " + str(child_fields) )
+			if child_fields[6] in point_keys:
+				# This point has a parent, so make a segment from parent to child
+				parent_fields = point_dict[child_fields[6]]
+				px = float(parent_fields[2])
+				py = float(parent_fields[3])
+				pz = float(parent_fields[4])
+				pr = float(parent_fields[5])
+				cx = float(child_fields[2])
+				cy = float(child_fields[3])
+				cz = float(child_fields[4])
+				cr = float(child_fields[5])
+				segments = segments + [ [ [px, py, pz, pr], [cx, cy, cz, cr] ] ]
+				num_total_segments += 1
+
+		if self.num_segs_limit > 0:
+			# Limit the number of segments
+			segments = segments[0:self.num_segs_limit]
+			num_total_segments = len(segments)
+
+		self.num_segments_in_file = num_total_segments
+
+		self.perform_analysis ( segments )
 
 		return segments
 
