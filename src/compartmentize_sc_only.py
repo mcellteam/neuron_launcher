@@ -349,6 +349,9 @@ def f_compartmentize_sc_only(context, swc_filepath):
 		# Get the name
 		sec_name = sec.name
 		
+		#if sec_name != "sc_38_46" and sec_name != "sc_31_38":
+		#	continue
+
 		# Check that it is a section
 		if len(sec_name) == sc_name_length and sec_name[0:3] == 'sc_':
 			
@@ -599,9 +602,10 @@ def f_compartmentize_sc_only(context, swc_filepath):
 	print("> Time: " + str(t_st[-1] - t_st[0]))
 
 
-
-
-
+	'''
+	if __name__ == "__main__":
+		f_compartmentize_sc_only(bpy.context, "/Users/oernst/Research/cnl/neuron_mcell/neuropil_mcellneuron/d001.swc")
+	'''
 
 
 
