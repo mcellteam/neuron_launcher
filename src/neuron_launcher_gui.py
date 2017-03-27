@@ -115,8 +115,8 @@ class CloseOpenCaps(bpy.types.Operator):
         return {"FINISHED"}
 
 # Class to make surface regions
-class MakeSurfaceRegions(bpy.types.Operator):
-    bl_idname = "nrnlauncher.make_surface_regions"
+class MakeSurfaceRegions_V1(bpy.types.Operator):
+    bl_idname = "nrnlauncher.make_surface_regions_V1"
     bl_label = "Make MCell surface regions"
 
     def execute ( self, context ):
@@ -138,6 +138,23 @@ class MakeSurfaceRegions(bpy.types.Operator):
             raise SystemError(res[1])
 
         return {"FINISHED"}
+
+
+# Class to make surface regions
+class MakeSurfaceRegions_V2(bpy.types.Operator):
+    bl_idname = "nrnlauncher.make_surface_regions_V2"
+    bl_label = "Make MCell surface regions"
+    
+    def execute ( self, context ):
+        print ( "Execute MakeSurfaceRegions" )
+        res = context.scene.nrnlauncher.get_swc_filepath(context)
+        if res[0] == 0:
+            surface_sections.f_surface_sections_V2(context, res[1])
+        else:
+            raise SystemError(res[1])
+        
+        return {"FINISHED"}
+
 
 #######################################################
 #######################################################
