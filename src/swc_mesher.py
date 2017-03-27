@@ -367,6 +367,7 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 	num_nodes_in_file = IntProperty ( default=-1 )
 	largest_radius_in_file = FloatProperty ( default=-1 )
 	smallest_radius_in_file = FloatProperty ( default=-1 )
+	default_radius = FloatProperty ( name="R", default=0.001 )
 	min_x = FloatProperty ( default=-1 )
 	max_x = FloatProperty ( default=-1 )
 	min_y = FloatProperty ( default=-1 )
@@ -452,6 +453,9 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 
 			row = box.row()
 			row.operator("mnm.make_new_cable")
+
+			row=box.row()
+			row.prop(self,"default_radius")
 
 			row = box.row()
 			col = row.column()
@@ -567,8 +571,9 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 		parent_index_layer.data[1].value = 1
 
 		# Radii
-		radius_layer.data[0].value = 1.0
-		radius_layer.data[1].value = 1.0
+		print("radius = " +str(context.scene.make_neuron_meta.default_radius))
+		radius_layer.data[0].value = context.scene.make_neuron_meta.default_radius
+		radius_layer.data[1].value = context.scene.make_neuron_meta.default_radius
 
 		# Segment type - just make it a dendrite
 		segment_type_layer.data[0].value = 3
