@@ -241,6 +241,13 @@ class SWCMesher_UL_object(bpy.types.UIList):
 		# Let it draw itself in a new row:
 		item.draw_item_in_row ( layout.row() )
 
+# Sections of a cable model item to draw in the list
+class SWCMesher_UL_section(bpy.types.UIList):
+	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+		# The item will be a CableModelObject
+		# Let it draw itself in a new row:
+		item.draw_item_in_row ( layout.row() )
+
 # Button to add cable model
 class CableModelAdd(bpy.types.Operator):
 	bl_idname = "mnm.cable_model_add"
@@ -469,6 +476,26 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 			col.operator("mnm.cable_model_add", icon='ZOOMIN', text="")
 			col.operator("mnm.cable_model_remove", icon='ZOOMOUT', text="")
 			col.operator("mnm.cable_model_remove_all", icon='X', text="")
+
+			# Cable section id chooser
+			###
+
+			row = box.row()
+			row.label("List of the section IDs", icon='CURVE_DATA')
+
+			row = box.row()
+			col = row.column()
+		
+			col.template_list("SWCMesher_UL_section", "",
+							  self, "cable_model_list",
+							  self, "active_object_index",
+							  rows=1)
+			
+			col = row.column(align=True)
+			col.operator("mnm.cable_model_add", icon='ZOOMIN', text="")
+			col.operator("mnm.cable_model_remove", icon='ZOOMOUT', text="")
+			col.operator("mnm.cable_model_remove_all", icon='X', text="")
+
 
 			###
 			# Edit the cable model
@@ -1442,6 +1469,9 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 
 			# Add to the list
 			self.cable_model_add_func(context)
+
+			#Add the section IDs to the list
+			index_number_layer.index_number_add_func(context)
 
 	
 	def build_neuron_meta_from_segments ( self, context, segments ):
