@@ -1482,8 +1482,8 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 			# Add to the list
 			self.cable_model_add_func(context)
 
-			#Add the section IDs to the list
-			index_number_layer.index_number_add_func(context)
+#			#Add the section IDs to the list
+#			index_number_layer.index_number_add_func(context)
 
 	
 	def build_neuron_meta_from_segments ( self, context, segments ):
