@@ -234,6 +234,14 @@ class CableModelObject(bpy.types.PropertyGroup):
 		col = row.column()
 		col.label ( str(self.name) )
 
+class SegmentObject(bpy.types.PropertyGroup):
+	name = StringProperty ( name="Name", default="", description="Segment ID" )
+
+	# Draw in list of objects
+	def draw_item_in_row ( self, row ):
+		col = row.column()
+		col.label ( str(self.name) )
+
 # Cable model object item to draw in the list
 class SWCMesher_UL_object(bpy.types.UIList):
 	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
@@ -244,7 +252,7 @@ class SWCMesher_UL_object(bpy.types.UIList):
 # Sections of a cable model item to draw in the list
 class SWCMesher_UL_section(bpy.types.UIList):
 	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
-		# The item will be a CableModelObject
+		# The item will be a SegmentObject
 		# Let it draw itself in a new row:
 		item.draw_item_in_row ( layout.row() )
 
@@ -390,6 +398,10 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 	# List of Cable Models
 	cable_model_list = CollectionProperty(type=CableModelObject, name="Cable Model List")
 	active_object_index = IntProperty(name="Active Object Index", default=0)
+
+	# List of segments in currently selected Cable Model
+	segments_list = CollectionProperty(type=SegmentObject, name="Segment List")
+	active_segment_index = IntProperty(name="Active Segment Index", default=0)
 
 	def draw ( self, layout ):
 
