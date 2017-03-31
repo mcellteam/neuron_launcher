@@ -489,7 +489,7 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 			col.operator("mnm.cable_model_remove", icon='ZOOMOUT', text="")
 			col.operator("mnm.cable_model_remove_all", icon='X', text="")
 
-			# Cable section id chooser
+			# Cable segment id chooser
 			###
 
 			row = box.row()
@@ -499,8 +499,8 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 			col = row.column()
 		
 			col.template_list("SWCMesher_UL_section", "",
-							  self, "cable_model_list",
-							  self, "active_object_index",
+							  self, "segments_list",
+							  self, "active_segment_index",
 							  rows=1)
 			
 			col = row.column(align=True)
