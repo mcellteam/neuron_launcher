@@ -23,7 +23,7 @@ class MakeNeuronMeta_Panel(bpy.types.Panel):
 
 	def draw(self, context):
 		mnm = context.scene.make_neuron_meta
-		mnm.draw ( self.layout )
+		mnm.draw ( self.layout, context )
 
 class MakeNeuronStick_Operator ( bpy.types.Operator ):
 	bl_idname = "mnm.make_line_mesh"
@@ -230,7 +230,7 @@ class SegmentObject(bpy.types.PropertyGroup):
 	name = StringProperty ( name="Name", default="", description="Segment ID" )
 
 	# Draw in list of objects
-	def draw_item_in_row ( self, row ):
+	def draw_item_in_row ( self, row):
 		col = row.column()
 		col.label ( str(self.name) )
 
@@ -377,9 +377,9 @@ def active_obj_index_changed (self, context):
 	"""The self passed in here is a MakeNeuronMetaPropGroup object"""
 	if len(self.cable_model_list)>0:
 		obj = self.cable_model_list[self.active_object_index]
-		seg = self.segments_list.add()
-		seg.name = "Segment" + str(self.active_segment_index)
-		self.active_segment_index = len(self.segments_list)
+		seg = obj.segments_list.add()
+		seg.name = str(obj.name)+"Segment" + str(obj.active_segment_index)
+		obj.active_segment_index = len(obj.segments_list)
 		for o in context.scene.objects:
 			if o.name == obj.name:
 				if o.hide:
@@ -427,8 +427,9 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 	segments_list = CollectionProperty(type=SegmentObject, name="Segment List")
 	active_segment_index = IntProperty(name="Active Segment Index", default=0)
 
-	def draw ( self, layout ):
+	def draw ( self, layout, context ):
 
+		object_group = context.scene.make_neuron_meta
 		box = layout.box()
 		row = box.row(align=True)
 		row.alignment = 'LEFT'
@@ -520,10 +521,12 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 			row.label("List of the section IDs", icon='CURVE_DATA')
 
 			row = box.row()
-
+			
+			obj = object_group.cable_model_list[object_group.active_object_index]
+			
 			row.template_list("SWCMesher_UL_section", "",
-							  self, "segments_list",
-							  self, "active_segment_index",
+							  obj, "segments_list",
+							  obj, "active_segment_index",
 							  rows=1)
 
 
