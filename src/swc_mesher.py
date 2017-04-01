@@ -237,7 +237,6 @@ class SegmentObject(bpy.types.PropertyGroup):
 # Class to hold the cable model
 class CableModelObject(bpy.types.PropertyGroup):
 	name = StringProperty ( name="Name", default="", description="Cable Model Name" )
-	
 	# List of segments in currently selected Cable Model
 	segments_list = CollectionProperty(type=SegmentObject, name="Segment List")
 	active_segment_index = IntProperty(name="Active Segment Index", default=0)
@@ -378,6 +377,9 @@ def active_obj_index_changed (self, context):
 	"""The self passed in here is a MakeNeuronMetaPropGroup object"""
 	if len(self.cable_model_list)>0:
 		obj = self.cable_model_list[self.active_object_index]
+		seg = self.segments_list.add()
+		seg.name = "Segment" + str(self.active_segment_index)
+		self.active_segment_index = len(self.segments_list)
 		for o in context.scene.objects:
 			if o.name == obj.name:
 				if o.hide:
