@@ -225,15 +225,7 @@ class DeleteAllVertexSpheres_Operator( bpy.types.Operator ):
 #######################################################
 #######################################################
 
-# Class to hold the cable model
-class CableModelObject(bpy.types.PropertyGroup):
-	name = StringProperty ( name="Name", default="", description="Cable Model Name" )
-
-	# Draw in list of objects
-	def draw_item_in_row ( self, row ):
-		col = row.column()
-		col.label ( str(self.name) )
-
+#Class of Segments 
 class SegmentObject(bpy.types.PropertyGroup):
 	name = StringProperty ( name="Name", default="", description="Segment ID" )
 
@@ -241,6 +233,21 @@ class SegmentObject(bpy.types.PropertyGroup):
 	def draw_item_in_row ( self, row ):
 		col = row.column()
 		col.label ( str(self.name) )
+
+# Class to hold the cable model
+class CableModelObject(bpy.types.PropertyGroup):
+	name = StringProperty ( name="Name", default="", description="Cable Model Name" )
+	
+	# List of segments in currently selected Cable Model
+	segments_list = CollectionProperty(type=SegmentObject, name="Segment List")
+	active_segment_index = IntProperty(name="Active Segment Index", default=0)
+
+
+	# Draw in list of objects
+	def draw_item_in_row ( self, row ):
+		col = row.column()
+		col.label ( str(self.name) )
+
 
 # Cable model object item to draw in the list
 class SWCMesher_UL_object(bpy.types.UIList):
@@ -367,6 +374,21 @@ def file_name_change ( self, context ):
 #######################################################
 #######################################################
 
+def active_obj_index_changed (self, context):
+	"""The self passed in here is a MakeNeuronMetaPropGroup object"""
+	if len(self.cable_model_list)>0:
+		obj = self.cable_model_list[self.active_object_index]
+		for o in context.scene.objects:
+			if o.name == obj.name:
+				if o.hide:
+					o.hide = False
+				if not o.select:
+					o.select = True
+				context.scene.objects.active = o
+			else:
+				#deselect
+				if o.select:
+					o.select = False
 
 class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 	# frames_dir = StringProperty(name="frames_dir", default="")
@@ -397,7 +419,7 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 
 	# List of Cable Models
 	cable_model_list = CollectionProperty(type=CableModelObject, name="Cable Model List")
-	active_object_index = IntProperty(name="Active Object Index", default=0)
+	active_object_index = IntProperty(name="Active Object Index", default=0, update=active_obj_index_changed)
 
 	# List of segments in currently selected Cable Model
 	segments_list = CollectionProperty(type=SegmentObject, name="Segment List")
@@ -496,17 +518,11 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 			row.label("List of the section IDs", icon='CURVE_DATA')
 
 			row = box.row()
-			col = row.column()
-		
-			col.template_list("SWCMesher_UL_section", "",
+
+			row.template_list("SWCMesher_UL_section", "",
 							  self, "segments_list",
 							  self, "active_segment_index",
 							  rows=1)
-			
-			col = row.column(align=True)
-			col.operator("mnm.cable_model_add", icon='ZOOMIN', text="")
-			col.operator("mnm.cable_model_remove", icon='ZOOMOUT', text="")
-			col.operator("mnm.cable_model_remove_all", icon='X', text="")
 
 
 			###
