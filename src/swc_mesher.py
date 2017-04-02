@@ -356,14 +356,20 @@ class MakeMeshData_Operator ( bpy.types.Operator ):
 
 	def execute ( self, context ):
 		mnm = context.scene.make_neuron_meta
+		current_segment = None
 		segments = mnm.read_segments_from_object(context)
-		mnm.build_neuron_meta_from_segments ( context, segments )
+		obj = mnm.cable_model_list[mnm.active_object_index]
+		current_segment = [segments[obj.active_segment_index]]
+		mnm.build_neuron_meta_from_segments ( context, current_segment )
 		return {"FINISHED"}
 
 	def invoke ( self, context, event ):
 		mnm = context.scene.make_neuron_meta
+		current_segment = None
 		segments = mnm.read_segments_from_object(context)
-		mnm.build_neuron_meta_from_segments ( context, segments )
+		obj = mnm.cable_model_list[mnm.active_object_index]
+		current_segment = [segments[obj.active_segment_index]]
+		mnm.build_neuron_meta_from_segments ( context, current_segment )
 		return {"FINISHED"}
 
 
@@ -405,7 +411,7 @@ def active_obj_index_changed (self, context):
 			for s in range(len(segments)):
 				seg = obj.segments_list.add()
 				seg.name = str(obj.name) + "_Segment_" + str(s+1)
-		obj.active_segment_index = len(obj.segments_list)
+		obj.active_segment_index = len(obj.segments_list)-1
 		for o in context.scene.objects:
 			if o.name == obj.name:
 				if o.hide:
