@@ -345,6 +345,28 @@ class MakeNeuronMetaData_Operator ( bpy.types.Operator ):
 		mnm.build_neuron_meta_from_segments ( context, segments )
 		return {"FINISHED"}
 
+class MakeMeshData_Operator ( bpy.types.Operator ):
+	bl_idname = "mnm.make_mesh_from_segment"
+	bl_label = "Make Surface Mesh for the Selected Segment"
+	bl_description = "Generate a surface mesh from the current segment"
+	bl_options = {"REGISTER", "UNDO"}
+	bl_space_type = "PROPERTIES"
+	bl_region_type = "WINDOW"
+	bl_context = "objectmode"
+
+	def execute ( self, context ):
+		mnm = context.scene.make_neuron_meta
+		segments = mnm.read_segments_from_object(context)
+		mnm.build_neuron_meta_from_segments ( context, segments )
+		return {"FINISHED"}
+
+	def invoke ( self, context, event ):
+		mnm = context.scene.make_neuron_meta
+		segments = mnm.read_segments_from_object(context)
+		mnm.build_neuron_meta_from_segments ( context, segments )
+		return {"FINISHED"}
+
+
 class MakeNeuronMetaAnalyze_Operator ( bpy.types.Operator ):
 	bl_idname = "mnm.analyze_file"
 	bl_label = "Analyze File"
@@ -586,6 +608,8 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 			row.prop ( self, "num_segs_limit", text="Limit Number of Segments" )
 			#row = box.row()
 			#row.prop ( self, "convert_to_mesh", text="Convert Meta to Mesh" )
+			row = subbox.row()
+			row.operator ("mnm.make_mesh_from_segment")
 			row = subbox.row()
 			row.operator ( "mnm.make_neuron_from_file" )
 			row.operator ( "mnm.make_neuron_from_data" )
