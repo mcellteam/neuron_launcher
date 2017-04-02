@@ -399,8 +399,12 @@ def active_obj_index_changed (self, context):
 	"""The self passed in here is a MakeNeuronMetaPropGroup object"""
 	if len(self.cable_model_list)>0:
 		obj = self.cable_model_list[self.active_object_index]
-		seg = obj.segments_list.add()
-		seg.name = str(obj.name)+"Segment" + str(obj.active_segment_index)
+		if obj.active_segment_index == 0:
+			segments = self.read_segments_from_object(context)
+#			seg.name = str(obj.name)+"Segment" + str(obj.active_segment_index)
+			for s in range(len(segments)):
+				seg = obj.segments_list.add()
+				seg.name = str(obj.name) + "_Segment_" + str(s+1)
 		obj.active_segment_index = len(obj.segments_list)
 		for o in context.scene.objects:
 			if o.name == obj.name:
@@ -445,9 +449,9 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 	cable_model_list = CollectionProperty(type=CableModelObject, name="Cable Model List")
 	active_object_index = IntProperty(name="Active Object Index", default=0, update=active_obj_index_changed)
 
-	# List of segments in currently selected Cable Model
-	segments_list = CollectionProperty(type=SegmentObject, name="Segment List")
-	active_segment_index = IntProperty(name="Active Segment Index", default=0)
+#	# List of segments in currently selected Cable Model
+#	segments_list = CollectionProperty(type=SegmentObject, name="Segment List")
+#	active_segment_index = IntProperty(name="Active Segment Index", default=0)
 
 	def draw ( self, layout, context ):
 
