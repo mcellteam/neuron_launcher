@@ -372,6 +372,41 @@ class MakeMeshData_Operator ( bpy.types.Operator ):
 		mnm.build_neuron_meta_from_segments ( context, current_segment )
 		return {"FINISHED"}
 
+class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
+	bl_idname = "mnm.make_mesh_corresponding_segments"
+	bl_label = "Make Surface Mesh Unioun For All Segments"
+	bl_description = "Generate a surface mesh and assign mesh parts to corresponding segments"
+	bl_options = {"REGISTER", "UNDO"}
+	bl_space_type = "PROPERTIES"
+	bl_region_type = "WINDOW"
+	bl_context = "objectmode"
+
+	def execute ( self, context ):
+		mnm = context.scene.make_neuron_meta
+		current_segment = None
+		segments = mnm.read_segments_from_object(context)
+		obj = mnm.cable_model_list[mnm.active_object_index]
+		for s in segments:
+			theSeg = [s]
+			mnm.build_neuron_meta_from_segments ( context, theSeg)
+			theSeg = None
+		#current_segment = [segments[obj.active_segment_index]]
+		#mnm.build_neuron_meta_from_segments ( context, current_segment )
+		return {"FINISHED"}
+
+	def invoke ( self, context, event ):
+		mnm = context.scene.make_neuron_meta
+		current_segment = None
+		segments = mnm.read_segments_from_object(context)
+		obj = mnm.cable_model_list[mnm.active_object_index]
+		for s in segments:
+			theSeg = [s]
+			mnm.build_neuron_meta_from_segments ( context, theSeg)
+			theSeg = None
+		#current_segment = [segments[obj.active_segment_index]]
+		#mnm.build_neuron_meta_from_segments ( context, current_segment )
+		return {"FINISHED"}
+
 
 class MakeNeuronMetaAnalyze_Operator ( bpy.types.Operator ):
 	bl_idname = "mnm.analyze_file"
@@ -621,8 +656,10 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 			row = subbox.row()
 			row.operator ("mnm.make_mesh_from_segment")
 			row = subbox.row()
-			row.operator ( "mnm.make_neuron_from_file" )
-			row.operator ( "mnm.make_neuron_from_data" )
+			row.operator ( "mnm.make_neuron_from_file")
+			row.operator ( "mnm.make_neuron_from_data")
+			row = subbox.row()
+			row.operator ("mnm.make_mesh_corresponding_segments")
 
 
 	###
