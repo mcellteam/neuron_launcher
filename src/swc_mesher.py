@@ -386,26 +386,44 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 		current_segment = None
 		segments = mnm.read_segments_from_object(context)
 		obj = mnm.cable_model_list[mnm.active_object_index]
+		old_objs = bpy.data.objects.keys()
 		for s in segments:
 			theSeg = [s]
 			mnm.build_neuron_meta_from_segments ( context, theSeg)
 			theSeg = None
+		now_objs = bpy.data.objects.keys()
+		new_objs = [ o for o in now_objs if o not in old_objs]
+#		for o in now_objs:
+#			if o not in old_objs:
+#				new_objs.append(o)
+		for o in new_objs:
+			bpy.data.objects[o].name  = "Neuron" + str(mnm.NN)
+			mnm.NN = mnm.NN + 1
 		#current_segment = [segments[obj.active_segment_index]]
 		#mnm.build_neuron_meta_from_segments ( context, current_segment )
 		return {"FINISHED"}
 
-	def invoke ( self, context, event ):
-		mnm = context.scene.make_neuron_meta
-		current_segment = None
-		segments = mnm.read_segments_from_object(context)
-		obj = mnm.cable_model_list[mnm.active_object_index]
-		for s in segments:
-			theSeg = [s]
-			mnm.build_neuron_meta_from_segments ( context, theSeg)
-			theSeg = None
-		#current_segment = [segments[obj.active_segment_index]]
-		#mnm.build_neuron_meta_from_segments ( context, current_segment )
-		return {"FINISHED"}
+#	def invoke ( self, context, event ):
+#		mnm = context.scene.make_neuron_meta
+#		current_segment = None
+#		segments = mnm.read_segments_from_object(context)
+#		obj = mnm.cable_model_list[mnm.active_object_index]
+#		old_objs =bpy.data.objects.keys()
+#		for s in segments:
+#			theSeg = [s]
+#			mnm.build_neuron_meta_from_segments ( context, theSeg)
+#			theSeg = None
+#		now_objs = bpy.data.objects.keys()
+#		new_objs = [ o for o in now_objs if o not in old_objs]
+##		for o in now_objs:
+##			if o not in old_objs:
+##				new_objs.append(o)
+#		for o in new_objs:
+#			bpy.data.objects[o].name  = "Neuron" + str(mnm.NN)
+#			mnm.NN = mnm.NN + 1
+#		#current_segment = [segments[obj.active_segment_index]]
+#		#mnm.build_neuron_meta_from_segments ( context, current_segment )
+#		return {"FINISHED"}
 
 
 class MakeNeuronMetaAnalyze_Operator ( bpy.types.Operator ):
@@ -480,7 +498,8 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 	max_y = FloatProperty ( default=-1 )
 	min_z = FloatProperty ( default=-1 )
 	max_z = FloatProperty ( default=-1 )
-	
+	NN = 0
+
 	scale_file_data = FloatProperty ( default=1.0, precision=4, description="Scale factor applied to data read from a file" )
 	mesh_resolution = FloatProperty ( default=0.1, precision=4, description="Intended resolution of the final mesh" )
 	min_forced_radius = FloatProperty ( default=0.0, precision=4, description="Smallest radius allowed in all segments (smaller forced up to this radius)" )
