@@ -379,7 +379,7 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 	bl_options = {"REGISTER", "UNDO"}
 	bl_space_type = "PROPERTIES"
 	bl_region_type = "WINDOW"
-	bl_context = "objectmode"
+	bl_context = "object"
 
 	def execute ( self, context ):
 		mnm = context.scene.make_neuron_meta
@@ -396,9 +396,31 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 #		for o in now_objs:
 #			if o not in old_objs:
 #				new_objs.append(o)
+		bpy.ops.object.mode_set(mode = 'OBJECT')
+		bpy.ops.object.select_all(action = 'DESELECT')
 		for o in new_objs:
-			bpy.data.objects[o].name  = "Neuron" + str(mnm.NN)
+			obj = bpy.data.objects[o]
+			new_name =  "Neuron" + str(mnm.NN)
+			obj.name  = new_name
 			mnm.NN = mnm.NN + 1
+			obj.select  = True
+			bpy.context.scene.objects.active = obj
+			print('Converting object ', obj.name, obj.type)
+			print('Selected ', obj.select)
+			print('Scene ', context.scene.name)
+			bpy.ops.object.mode_set(mode = 'EDIT')
+			bpy.ops.object.mode_set(mode = 'OBJECT')
+			bpy.ops.object.convert(target = 'MESH')
+			obj = bpy.context.active_object
+			obj.name = new_name
+			mesh = obj.data
+			bpy.ops.object.mode_set(mode = 'EDIT')
+			bpy.ops.mesh.select_all(action = 'SELECT')
+			bpy.ops.mesh.quads_convert_to_tris()
+			bpy.ops.gamer.add_boundary()
+			bpy.ops.gamer.assign_boundary_faces()
+			bpy.ops.object.mode_set(mode = 'OBJECT')
+			obj.select = False
 		#current_segment = [segments[obj.active_segment_index]]
 		#mnm.build_neuron_meta_from_segments ( context, current_segment )
 		return {"FINISHED"}
