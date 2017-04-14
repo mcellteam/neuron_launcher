@@ -421,8 +421,29 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 			bpy.ops.gamer.assign_boundary_faces()
 			bpy.ops.object.mode_set(mode = 'OBJECT')
 			obj.select = False
-		#current_segment = [segments[obj.active_segment_index]]
-		#mnm.build_neuron_meta_from_segments ( context, current_segment )
+##		current_segment = [segments[obj.active_segment_index]]
+##		mnm.build_neuron_meta_from_segments ( context, current_segment )
+		for i in range(mnm.NN-1):
+			bpy.ops.object.mode_set(mode = 'OBJECT')
+			bpy.ops.object.select_all(action = 'DESELECT')
+			obj = bpy.data.objects['Neuron0']
+			obj.select = True
+			bpy.context.scene.objects.active = obj
+			bpy.ops.object.modifier_add(type='BOOLEAN')
+			name = 'Neuron'+str(i+1)
+			mod = obj.modifiers
+			mod[0].object = bpy.data.objects[name]
+			mod[0].operation = 'UNION'
+			mod[0].solver = 'CARVE'
+			bpy.ops.object.modifier_apply(apply_as = 'DATA', modifier = mod[0].name)
+			new_mat = bpy.data.materials['bnd_id_'+str(i+2)+'_mat']
+			bpy.context.object.data.materials.append(new_mat)
+			bpy.ops.object.mode_set(mode = 'EDIT')
+			bpy.ops.mesh.select_all(action = 'DESELECT')
+			bpy.context.object.active_material_index = 0
+			bpy.ops.object.material_slot_select()
+			bpy.context.object.active_material_index = i+2
+			bpy.ops.object.material_slot_assign()
 		return {"FINISHED"}
 
 #	def invoke ( self, context, event ):
