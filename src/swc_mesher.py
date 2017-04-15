@@ -444,6 +444,17 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 			bpy.ops.object.material_slot_select()
 			bpy.context.object.active_material_index = i+2
 			bpy.ops.object.material_slot_assign()
+		for i in range(mnm.NN):
+			bpy.ops.object.mode_set(mode = 'OBJECT')
+			bpy.ops.object.select_all(action = 'DESELECT')
+			obj = bpy.data.objects['Neuron0']
+			bpy.context.scene.objects.active = obj
+			bpy.ops.object.mode_set(mode = 'EDIT')
+			bpy.ops.mesh.select_all(action = 'DESELECT')
+			bpy.context.object.active_material_index = i+1
+			bpy.ops.object.material_slot_select()
+			bpy.ops.gamer.add_boundary()
+			bpy.ops.gamer.assign_boundary_faces()
 		return {"FINISHED"}
 
 #	def invoke ( self, context, event ):
