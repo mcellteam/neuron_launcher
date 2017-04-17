@@ -453,8 +453,12 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 			bpy.ops.mesh.select_all(action = 'DESELECT')
 			bpy.context.object.active_material_index = i+1
 			bpy.ops.object.material_slot_select()
+			bpy.ops.mesh.quads_convert_to_tris()
 			bpy.ops.gamer.add_boundary()
 			bpy.ops.gamer.assign_boundary_faces()
+		bpy.ops.gamer.select_all_boundary_faces()
+		bpy.ops.mesh.quads_convert_to_tris()
+		bpy.ops.gamer.smooth()
 		return {"FINISHED"}
 
 #	def invoke ( self, context, event ):
