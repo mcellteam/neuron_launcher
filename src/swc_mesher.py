@@ -374,7 +374,7 @@ class MakeMeshData_Operator ( bpy.types.Operator ):
 
 class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 	bl_idname = "mnm.make_mesh_corresponding_segments"
-	bl_label = "Make Surface Mesh Unioun For All Segments"
+	bl_label = "Make Surface Mesh Union For All Segments"
 	bl_description = "Generate a surface mesh and assign mesh parts to corresponding segments"
 	bl_options = {"REGISTER", "UNDO"}
 	bl_space_type = "PROPERTIES"
@@ -402,9 +402,17 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 			obj = bpy.data.objects[o]
 			new_name =  "Neuron" + str(mnm.NN)
 			obj.name  = new_name
-			mnm.NN = mnm.NN + 1
 			obj.select  = True
 			bpy.context.scene.objects.active = obj
+			for i in range(len(obj.material_slots)-1, -1, -1):
+				bpy.context.object.active_material_index = i
+				bpy.ops.object.moterial_slot_remove()
+			if mnm.NN == 0:
+				unset_mat = bpy.data.materials.get('bnd_unset_mat')
+				if unset_mat == None:
+					unset_mat = bpy.data.materials.new('bnd_unset_mat')
+				bpy.context.object.data.materials.append(unset_mat)
+
 			print('Converting object ', obj.name, obj.type)
 			print('Selected ', obj.select)
 			print('Scene ', context.scene.name)
@@ -416,13 +424,31 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 			mesh = obj.data
 			bpy.ops.object.mode_set(mode = 'EDIT')
 			bpy.ops.mesh.select_all(action = 'SELECT')
-			bpy.ops.mesh.quads_convert_to_tris()
-			bpy.ops.gamer.add_boundary()
-			bpy.ops.gamer.assign_boundary_faces()
+#			bpy.ops.mesh.quads_convert_to_tris()
+#			bpy.ops.gamer.add_boundary()
+			new_mat = bpy.data.materials.new('bnd_' + str(mnm.NN+1) + '_mat')
+			bpy.context.object.data.materials.append(new_mat)
+			if mnm.NN == 0:
+				bpy.context.object.active_material_index = 1
+			else:
+				bpy.context.object.active_material_index = 0
+			bpy.ops.object.material_slot_assign()
+#			bpy.ops.gamer.assign_boundary_faces()
 			bpy.ops.object.mode_set(mode = 'OBJECT')
 			obj.select = False
-##		current_segment = [segments[obj.active_segment_index]]
-##		mnm.build_neuron_meta_from_segments ( context, current_segment )
+			mnm.NN = mnm.NN + 1
+		bpy.ops.object.mode_set(mode = 'OBJECT')
+		bpy.ops.object.select_all(action = 'SELECT')
+		bpy.context.scene.objects.active = bpy.data.objects['Neuron0']
+
+		for i in range(mnm.NN - 1):
+			new_mat = bpy.data.materials['bnd_'+str(i+2)+'_mat']
+			bpy.context.object.data.materials.append(new_mat)
+#		bpy.ops.btool.direct_union()
+#		bpy.ops.object.booltron_union()
+#		current_segment = [segments[obj.active_segment_index]]
+#		mnm.build_neuron_meta_from_segments ( context, current_segment )
+		t_0 = time.time()
 		for i in range(mnm.NN-1):
 			bpy.ops.object.mode_set(mode = 'OBJECT')
 			bpy.ops.object.select_all(action = 'DESELECT')
@@ -431,12 +457,20 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 			bpy.context.scene.objects.active = obj
 			bpy.ops.object.modifier_add(type='BOOLEAN')
 			name = 'Neuron'+str(i+1)
-			mod = obj.modifiers
-			mod[0].object = bpy.data.objects[name]
-			mod[0].operation = 'UNION'
-			mod[0].solver = 'CARVE'
-			bpy.ops.object.modifier_apply(apply_as = 'DATA', modifier = mod[0].name)
-			new_mat = bpy.data.materials['bnd_id_'+str(i+2)+'_mat']
+			mod = obj.modifiers[0]
+			mod.show_viewport = False
+			mod.operation = 'UNION'
+			mod.solver = 'CARVE'
+			ob = bpy.data.objects[name]
+			mod.object = ob
+			print('Boolean union with ', name)
+			t_1 = time.time()
+			bpy.ops.object.modifier_apply(apply_as = 'DATA', modifier = mod.name)
+			bpy.context.scene.objects.unlink(ob)
+			bpy.data.objects.remove(ob)
+			t_2 = time.time()
+			print('Union time ', str(t_2-t_1), '  total time', str(t_2-t_0))
+			new_mat = bpy.data.materials['bnd_'+str(i+2)+'_mat']
 			bpy.context.object.data.materials.append(new_mat)
 			bpy.ops.object.mode_set(mode = 'EDIT')
 			bpy.ops.mesh.select_all(action = 'DESELECT')
@@ -444,20 +478,25 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 			bpy.ops.object.material_slot_select()
 			bpy.context.object.active_material_index = i+2
 			bpy.ops.object.material_slot_assign()
+		bpy.ops.object.mode_set(mode = 'EDIT')
+		bpy.ops.mesh.select_all(action = 'SELECT')
+		bpy.ops.mesh.quads_convert_to_tris()
 		for i in range(mnm.NN):
 			bpy.ops.object.mode_set(mode = 'OBJECT')
 			bpy.ops.object.select_all(action = 'DESELECT')
 			obj = bpy.data.objects['Neuron0']
+			obj.select = True
 			bpy.context.scene.objects.active = obj
 			bpy.ops.object.mode_set(mode = 'EDIT')
 			bpy.ops.mesh.select_all(action = 'DESELECT')
 			bpy.context.object.active_material_index = i+1
 			bpy.ops.object.material_slot_select()
-			bpy.ops.mesh.quads_convert_to_tris()
+#			bpy.ops.mesh.quads_convert_to_tris()
 			bpy.ops.gamer.add_boundary()
 			bpy.ops.gamer.assign_boundary_faces()
 		bpy.ops.gamer.select_all_boundary_faces()
-		bpy.ops.mesh.quads_convert_to_tris()
+		bpy.ops.object.mode_set(mode = 'OBJECT')
+#		bpy.ops.mesh.quads_convert_to_tris()
 		bpy.ops.gamer.smooth()
 		return {"FINISHED"}
 
