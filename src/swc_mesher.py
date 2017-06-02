@@ -5,6 +5,10 @@ import time
 import bpy
 from bpy.props import *
 import bmesh
+import subprocess
+import sys
+import os
+import tempfile
 
 from bpy_extras.io_utils import ExportHelper
 
@@ -384,12 +388,23 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 	def execute ( self, context ):
 		mnm = context.scene.make_neuron_meta
 		current_segment = None
-		segments = mnm.read_segments_from_object(context, radius_dr = 0.08)
 		obj = mnm.cable_model_list[mnm.active_object_index]
+#		bpy.ops.mnm.make_neuron_from_file()
+		#mnm.build_neuron_meta_from_segments(context, segments, tweak_le = False)
+#		bpy.ops.object.mode_set(mode = 'EDIT')
+#		bpy.ops.mesh.select_all(action = 'SELECT')
+#		bpy.ops.mesh.quads_convert_to_tris()
+		bpy.ops.object.mode_set(mode = 'OBJECT')
+#		bpy.ops.gamer.smooth()
 		old_objs = bpy.data.objects.keys()
+		bpy.ops.object.select_all(action = 'DESELECT')
+		segments = mnm.read_segments_from_object(context, radius_dr = 0.2)
 		for s in segments:
 			theSeg = [s]
-			mnm.build_neuron_meta_from_segments ( context, theSeg, tweak_le = False)
+			mnm.build_neuron_meta_from_segments ( context, theSeg, name = 'Neuron' +str(mnm.NN), tweak_le = False)
+			obj = bpy.context.selected_objects[0]
+			obj.select = False
+			mnm.NN += 1
 			theSeg = None
 		now_objs = bpy.data.objects.keys()
 		new_objs = [ o for o in now_objs if o not in old_objs]
@@ -398,48 +413,76 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 #				new_objs.append(o)
 		bpy.ops.object.mode_set(mode = 'OBJECT')
 		bpy.ops.object.select_all(action = 'DESELECT')
+		obj = bpy.context.scene.objects['Neuron']
+		obj.select = True
+		bpy.context.scene.objects.active = obj
+		tempdir = tempfile.gettempdir()
+		whole_obj_file_name = os.path.join(tempdir, 'whole_mesh.obj')
+		bpy.ops.export_scene.obj(filepath=whole_obj_file_name, axis_forward='Y', axis_up="Z", use_selection=True, use_edges=False, use_normals=False, use_uvs=False, use_materials=False, use_blen_objects=False) 
+		whole_mdl_file_name = os.path.join(tempdir, 'whole_mcell.mdl')
+		print('Converting obj to mdl')
+		make_mdl_cmd = "obj2mcell %s %s > %s" % (obj.name, whole_obj_file_name, whole_mdl_file_name)
+		subprocess.check_output([make_mdl_cmd],shell=True)
+		print('Done converting')
 		for o in new_objs:
+			print('making Mcell region for %s'% (o))
+			bpy.ops.object.select_all(action = 'DESELECT')
 			obj = bpy.data.objects[o]
-			new_name =  "Neuron" + str(mnm.NN)
-			obj.name  = new_name
-			obj.select  = True
+			obj.select = True
 			bpy.context.scene.objects.active = obj
-			for i in range(len(obj.material_slots)-1, -1, -1):
-				bpy.context.object.active_material_index = i
-				bpy.ops.object.material_slot_remove()
-			if mnm.NN == 0:
-				unset_mat = bpy.data.materials.get('bnd_unset_mat')
-				if unset_mat == None:
-					unset_mat = bpy.data.materials.new('bnd_unset_mat')
-				bpy.context.object.data.materials.append(unset_mat)
+			UniqueName = 'seg_'+ obj.name.replace('Neuron', '') + '_mesh.obj'
+			seg_obj_file_name = os.path.join(tempdir, UniqueName)
+			bpy.ops.export_scene.obj(filepath=seg_obj_file_name, axis_forward='Y', axis_up="Z", use_selection=True, use_edges=False, use_normals=False, use_uvs=False, use_materials=False, use_blen_objects=False) 
+			seg_mdl_tag_file_name = os.path.join(tempdir, UniqueName.replace('mesh.obj', 'mcell.mdl'))
+			tag_cmd = "obj_tag_region %s %s > %s" % (whole_obj_file_name, seg_obj_file_name, seg_mdl_tag_file_name)
+			subprocess.check_output([tag_cmd],shell=True)
+			temp_mdl_file_name = os.path.join(tempdir, 'TempFile.mdl')
+			insert_reg_cmd = "insert_mdl_region.py %s %s > %s" %(whole_mdl_file_name, seg_mdl_tag_file_name, temp_mdl_file_name)
+			subprocess.check_output([insert_reg_cmd],shell=True)
+			os.rename(temp_mdl_file_name, whole_mdl_file_name)
+		bpy.ops.import_mdl_mesh.mdl(filepath = whole_mdl_file_name)
+#		for o in new_objs:
+#			obj = bpy.data.objects[o]
+#			new_name =  "Neuron" + str(mnm.NN)
+#			obj.name  = new_name
+#			obj.select  = True
+#			bpy.context.scene.objects.active = obj
+#			for i in range(len(obj.material_slots)-1, -1, -1):
+#				bpy.context.object.active_material_index = i
+#				bpy.ops.object.material_slot_remove()
+#			if mnm.NN == 0:
+#				unset_mat = bpy.data.materials.get('bnd_unset_mat')
+#				if unset_mat == None:
+#					unset_mat = bpy.data.materials.new('bnd_unset_mat')
+#				bpy.context.object.data.materials.append(unset_mat)
 
-			print('Converting object ', obj.name, obj.type)
-			print('Selected ', obj.select)
-			print('Scene ', context.scene.name)
-			bpy.ops.object.mode_set(mode = 'EDIT')
-			bpy.ops.object.mode_set(mode = 'OBJECT')
-			bpy.ops.object.convert(target = 'MESH')
-			obj = bpy.context.active_object
-			obj.name = new_name
-			mesh = obj.data
-			bpy.ops.object.mode_set(mode = 'EDIT')
-			bpy.ops.mesh.select_all(action = 'SELECT')
-#			bpy.ops.mesh.quads_convert_to_tris()
-#			bpy.ops.gamer.add_boundary()
-			new_mat = bpy.data.materials.new('bnd_' + str(mnm.NN+1) + '_mat')
-			bpy.context.object.data.materials.append(new_mat)
-			if mnm.NN == 0:
-				bpy.context.object.active_material_index = 1
-			else:
-				bpy.context.object.active_material_index = 0
-			bpy.ops.object.material_slot_assign()
-#			bpy.ops.gamer.assign_boundary_faces()
-			bpy.ops.object.mode_set(mode = 'OBJECT')
-			obj.select = False
-			mnm.NN = mnm.NN + 1
-		bpy.ops.object.mode_set(mode = 'OBJECT')
-		bpy.ops.object.select_all(action = 'SELECT')
-		bpy.context.scene.objects.active = bpy.data.objects['Neuron0']
+#			print('Converting object ', obj.name, obj.type)
+#			print('Selected ', obj.select)
+#			print('Scene ', context.scene.name)
+#			bpy.ops.object.mode_set(mode = 'EDIT')
+#			bpy.ops.object.mode_set(mode = 'OBJECT')
+#			bpy.ops.object.convert(target = 'MESH')
+#			obj = bpy.context.active_object
+#			obj.name = new_name
+#			mesh = obj.data
+#			bpy.ops.object.mode_set(mode = 'EDIT')
+#			bpy.ops.mesh.select_all(action = 'SELECT')
+##			bpy.ops.mesh.quads_convert_to_tris()
+##			bpy.ops.gamer.add_boundary()
+#			new_mat = bpy.data.materials.new('bnd_' + str(mnm.NN+1) + '_mat')
+#			bpy.context.object.data.materials.append(new_mat)
+#			if mnm.NN == 0:
+#				bpy.context.object.active_material_index = 1
+#			else:
+#				bpy.context.object.active_material_index = 0
+#			bpy.ops.object.material_slot_assign()
+##			bpy.ops.gamer.assign_boundary_faces()
+#			bpy.ops.object.mode_set(mode = 'OBJECT')
+#			obj.select = False
+#			mnm.NN = mnm.NN + 1
+#		bpy.ops.object.mode_set(mode = 'OBJECT')
+#		bpy.ops.object.select_all(action = 'SELECT')
+#		bpy.context.scene.objects.active = bpy.data.objects['Neuron0']
 
 #		for i in range(mnm.NN - 1):
 #			new_mat = bpy.data.materials['bnd_'+str(i+2)+'_mat']
@@ -500,27 +543,6 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 #		bpy.ops.gamer.smooth()
 		return {"FINISHED"}
 
-#	def invoke ( self, context, event ):
-#		mnm = context.scene.make_neuron_meta
-#		current_segment = None
-#		segments = mnm.read_segments_from_object(context)
-#		obj = mnm.cable_model_list[mnm.active_object_index]
-#		old_objs =bpy.data.objects.keys()
-#		for s in segments:
-#			theSeg = [s]
-#			mnm.build_neuron_meta_from_segments ( context, theSeg)
-#			theSeg = None
-#		now_objs = bpy.data.objects.keys()
-#		new_objs = [ o for o in now_objs if o not in old_objs]
-##		for o in now_objs:
-##			if o not in old_objs:
-##				new_objs.append(o)
-#		for o in new_objs:
-#			bpy.data.objects[o].name  = "Neuron" + str(mnm.NN)
-#			mnm.NN = mnm.NN + 1
-#		#current_segment = [segments[obj.active_segment_index]]
-#		#mnm.build_neuron_meta_from_segments ( context, current_segment )
-#		return {"FINISHED"}
 
 
 class MakeNeuronMetaAnalyze_Operator ( bpy.types.Operator ):
@@ -579,7 +601,7 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 	neuron_file_name = StringProperty ( subtype='FILE_PATH', default="", update=file_name_change)
 	neuron_file_data = StringProperty ( default="" )
 
-	convert_to_mesh = BoolProperty ( name="Convert to Mesh", default=False )
+	convert_to_mesh = BoolProperty ( name="Convert to Mesh", default=True )
 	show_analysis = BoolProperty ( default=False )
 	show_stick    = BoolProperty ( default=False )
 	file_analyzed = BoolProperty ( default=False )
@@ -767,8 +789,8 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 			row.prop ( self, "min_forced_radius", text="Minimum Forced Radius" )
 			row = subbox.row()
 			row.prop ( self, "num_segs_limit", text="Limit Number of Segments" )
-			#row = box.row()
-			#row.prop ( self, "convert_to_mesh", text="Convert Meta to Mesh" )
+			row = box.row()
+			row.prop ( self, "convert_to_mesh", text="Convert Meta to Mesh" )
 			row = subbox.row()
 			row.operator ("mnm.make_mesh_from_segment")
 			row = subbox.row()
@@ -1694,7 +1716,7 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 #			index_number_layer.index_number_add_func(context)
 
 	
-	def build_neuron_meta_from_segments ( self, context, segments, tweak_le = True ):
+	def build_neuron_meta_from_segments ( self, context, segments, name = 'Neuron', tweak_le = True ):
 
 		# segments = self.read_segments_from_file()
 
@@ -1702,7 +1724,7 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 
 		scene = bpy.context.scene
 		mball = bpy.data.metaballs.new('neuron')
-		obj = bpy.data.objects.new('Neuron',mball)
+		obj = bpy.data.objects.new(name, mball)
 		scene.objects.link(obj)
 		mball.resolution = self.mesh_resolution
 		mball.render_resolution = self.mesh_resolution
@@ -1784,7 +1806,18 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 					# obj_name = self.add_segment ( obj_name, p1=mathutils.Vector((x1,y1,z1)), p2=mathutils.Vector((x2,y2,z2)), r1=r1, r2=r2, faces=10, cap1=cap1, cap2=True )
 				lc = c
 
-		if self.convert_to_mesh:
-			bpy.ops.object.convert()
-
 		obj.select = True
+		bpy.context.scene.objects.active = obj
+
+		if self.convert_to_mesh:
+			print('Converting to mesh')
+			bpy.ops.object.convert(target = 'MESH')
+			obj = bpy.context.selected_objects[0]
+			bpy.ops.object.mode_set(mode = 'EDIT')
+			bpy.ops.mesh.select_all(action = 'SELECT')
+			bpy.ops.mesh.quads_convert_to_tris()
+			bpy.ops.object.mode_set(mode = 'OBJECT')
+			obj.name = name
+
+
+
