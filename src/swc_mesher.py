@@ -398,10 +398,10 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 #		bpy.ops.gamer.smooth()
 		old_objs = bpy.data.objects.keys()
 		bpy.ops.object.select_all(action = 'DESELECT')
-		segments = mnm.read_segments_from_object(context, radius_dr = 0.2)
+		segments = mnm.read_segments_from_object(context, use_dr = True) # radius_dr = 0.2)
 		for s in segments:
 			theSeg = [s]
-			mnm.build_neuron_meta_from_segments ( context, theSeg, name = 'Neuron' +str(mnm.NN), tweak_le = False)
+			mnm.build_neuron_meta_from_segments ( context, theSeg, name = 'Neuron_%04d_%04d' %(s[0][0],s[1][0]), tweak_le = False)
 			obj = bpy.context.selected_objects[0]
 			obj.select = False
 			mnm.NN += 1
@@ -430,10 +430,10 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 			obj = bpy.data.objects[o]
 			obj.select = True
 			bpy.context.scene.objects.active = obj
-			UniqueName = 'seg_'+ obj.name.replace('Neuron', '') + '_mesh.obj'
+			UniqueName = 'sc'+ obj.name.replace('Neuron', '') + '.obj'
 			seg_obj_file_name = os.path.join(tempdir, UniqueName)
 			bpy.ops.export_scene.obj(filepath=seg_obj_file_name, axis_forward='Y', axis_up="Z", use_selection=True, use_edges=False, use_normals=False, use_uvs=False, use_materials=False, use_blen_objects=False) 
-			seg_mdl_tag_file_name = os.path.join(tempdir, UniqueName.replace('mesh.obj', 'mcell.mdl'))
+			seg_mdl_tag_file_name = os.path.join(tempdir, UniqueName.replace('.obj', '.mdl'))
 			tag_cmd = "obj_tag_region %s %s > %s" % (whole_obj_file_name, seg_obj_file_name, seg_mdl_tag_file_name)
 			subprocess.check_output([tag_cmd],shell=True)
 			temp_mdl_file_name = os.path.join(tempdir, 'TempFile.mdl')
@@ -441,6 +441,14 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 			subprocess.check_output([insert_reg_cmd],shell=True)
 			os.rename(temp_mdl_file_name, whole_mdl_file_name)
 		bpy.ops.import_mdl_mesh.mdl(filepath = whole_mdl_file_name)
+		bpy.ops.object.mode_set(mode = 'EDIT')
+		context.tool_settings.mesh_select_mode = (True, False, False)
+		sections = context.object.mcell.regions.region_list
+		for s in sections:
+			bpy.ops.mesh.select_all(action = 'DESELECT')
+			s.select_region_faces(context)
+			s.assign_region_faces(context)
+		bpy.ops.object.mode_set(mode = 'OBJECT')
 #		for o in new_objs:
 #			obj = bpy.data.objects[o]
 #			new_name =  "Neuron" + str(mnm.NN)
@@ -611,6 +619,7 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 	largest_radius_in_file = FloatProperty ( default=-1 )
 	smallest_radius_in_file = FloatProperty ( default=-1 )
 	default_radius = FloatProperty ( name="R", default=0.001 )
+	radius_dr = FloatProperty ( name="dr", default=0.01,  description = "The difference between the radii of the entire mesh and the segments")
 	min_x = FloatProperty ( default=-1 )
 	max_x = FloatProperty ( default=-1 )
 	min_y = FloatProperty ( default=-1 )
@@ -798,6 +807,8 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 			row.operator ( "mnm.make_neuron_from_data")
 			row = subbox.row()
 			row.operator ("mnm.make_mesh_corresponding_segments")
+			row = subbox.row()
+			row.prop (self, "radius_dr", text = "Segmenter delta_r")
 
 
 	###
@@ -1236,7 +1247,7 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 		self.read_segments_from_file()
 		# self.file_analyzed = True
 
-	def read_segments_from_object ( self, context, radius_dr = 0.0 ):
+	def read_segments_from_object ( self, context, use_dr = False): #radius_dr = 0.0 ):
 		# Read in the data
 		segments = []
 		
@@ -1281,7 +1292,10 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 			x = v.co.x
 			y = v.co.y
 			z = v.co.z
-			R = radius_layer.data[i].value + radius_dr
+			if use_dr:
+				R = radius_layer.data[i].value + self.radius_dr
+			else:
+				R = radius_layer.data[i].value
 			P = int(parent_index_layer.data[i].value)
 			# P = (packed_layer.data[i].value >> 3) & 0x03fff
 
@@ -1306,15 +1320,17 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 			if child_fields[6] in point_keys:
 				# This point has a parent, so make a segment from parent to child
 				parent_fields = point_dict[child_fields[6]]
+				pn = int(parent_fields[0])
 				px = float(parent_fields[2])
 				py = float(parent_fields[3])
 				pz = float(parent_fields[4])
 				pr = float(parent_fields[5])
+				cn = int(child_fields[0])
 				cx = float(child_fields[2])
 				cy = float(child_fields[3])
 				cz = float(child_fields[4])
 				cr = float(child_fields[5])
-				segments = segments + [ [ [px, py, pz, pr], [cx, cy, cz, cr] ] ]
+				segments = segments + [ [ [pn, px, py, pz, pr], [cn, cx, cy, cz, cr] ] ]
 				num_total_segments += 1
 
 		if self.num_segs_limit > 0:
@@ -1428,15 +1444,17 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 				if child_fields[6] in point_keys:
 					# This point has a parent, so make a segment from parent to child
 					parent_fields = point_dict[child_fields[6]]
+					pn = int(parent_fields[0])
 					px = float(parent_fields[2])
 					py = float(parent_fields[3])
 					pz = float(parent_fields[4])
 					pr = float(parent_fields[5])
+					cn = int(child_fields[0])
 					cx = float(child_fields[2])
 					cy = float(child_fields[3])
 					cz = float(child_fields[4])
 					cr = float(child_fields[5])
-					segments = segments + [ [ [px, py, pz, pr], [cx, cy, cz, cr] ] ]
+					segments = segments + [ [ [pn, px, py, pz, pr], [cn, cx, cy, cz, cr] ] ]
 					num_total_segments += 1
 
 		else:
@@ -1514,10 +1532,10 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 			lc = None
 			cap1 = True
 			for c in seg:
-				x = float(c[0])
-				y = float(c[1])
-				z = float(c[2])
-				r = float(c[3])
+				x = float(c[1])
+				y = float(c[2])
+				z = float(c[3])
+				r = float(c[4])
 				if first_pass or (r > self.largest_radius_in_file):
 					self.largest_radius_in_file = r
 				if first_pass or (r < self.smallest_radius_in_file):
@@ -1740,16 +1758,16 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 			for c in seg:
 				if (lc != None):  # and (seg_num < 20):
 
-					print ( "Building segment with radius of " + str(lc[3]) + " and " + str(c[3]) )
+					print ( "Building segment with radius of " + str(lc[4]) + " and " + str(c[4]) )
 
-					x1 = float(lc[0]) * self.scale_file_data
-					y1 = float(lc[1]) * self.scale_file_data
-					z1 = float(lc[2]) * self.scale_file_data
-					r1 = float(lc[3]) * self.scale_file_data
-					x2 = float(c[0]) * self.scale_file_data
-					y2 = float(c[1]) * self.scale_file_data
-					z2 = float(c[2]) * self.scale_file_data
-					r2 = float(c[3]) * self.scale_file_data
+					x1 = float(lc[1]) * self.scale_file_data
+					y1 = float(lc[2]) * self.scale_file_data
+					z1 = float(lc[3]) * self.scale_file_data
+					r1 = float(lc[4]) * self.scale_file_data
+					x2 = float(c[1]) * self.scale_file_data
+					y2 = float(c[2]) * self.scale_file_data
+					z2 = float(c[3]) * self.scale_file_data
+					r2 = float(c[4]) * self.scale_file_data
 
 					# Make the segment from a series of meta balls
 

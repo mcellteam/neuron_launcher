@@ -131,12 +131,12 @@ def f_check_connectivity(context, swc_filepath):
                 reg_brdr_names.append(o_reg.name)
 
         # Construct list of allowed region names based on SWC file connectivity
-        pt1 = int(reg.name[3:5])
-        pt2 = int(reg.name[6:8])
+        pt1 = int(reg.name[3:7])
+        pt2 = int(reg.name[8:12])
         reg_allowed_names = []
         for i_pt in [pt1,pt2]:
             for j_pt in pt_connect[i_pt-1]:
-                allowed_name = "sc_%02d_%02d" % (min(i_pt,j_pt),max(i_pt,j_pt))
+                allowed_name = "sc_%04d_%04d" % (min(i_pt,j_pt),max(i_pt,j_pt))
                 if not allowed_name in reg_allowed_names and not reg.name == allowed_name:
                     reg_allowed_names.append(allowed_name)
 
