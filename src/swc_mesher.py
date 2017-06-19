@@ -441,14 +441,160 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 			subprocess.check_output([insert_reg_cmd],shell=True)
 			os.rename(temp_mdl_file_name, whole_mdl_file_name)
 		bpy.ops.import_mdl_mesh.mdl(filepath = whole_mdl_file_name)
+		bpy.ops.object.select_all(action = 'DESELECT')
+		obj = bpy.context.scene.objects['Neuron']
+		obj.select = True
+		bpy.context.scene.objects.active = obj
 		bpy.ops.object.mode_set(mode = 'EDIT')
 		context.tool_settings.mesh_select_mode = (True, False, False)
-		sections = context.object.mcell.regions.region_list
+		sections = obj.mcell.regions.region_list
 		for s in sections:
 			bpy.ops.mesh.select_all(action = 'DESELECT')
 			s.select_region_faces(context)
 			s.assign_region_faces(context)
+		context.tool_settings.mesh_select_mode = (False, False, True)
 		bpy.ops.object.mode_set(mode = 'OBJECT')
+		bpy.ops.object.mode_set(mode = 'EDIT')
+		bpy.ops.mcell.eliminate_all_overlaps()
+		bpy.ops.object.mode_set(mode = 'OBJECT')
+		face_reg_dict = obj.mcell.get_face_regions_dictionary(obj)
+
+		# Find and assign unassigned triangles
+
+		mesh = obj.data
+		unassigned_exist = True
+		edge_faces = {}
+		for f in mesh.polygons:
+			for ek in f.edge_keys:
+				if ek not in edge_faces:
+					edge_faces[ek] = {f.index}
+				else:
+					edge_faces[ek].add(f.index)
+		bpy.ops.object.mode_set(mode = 'EDIT')
+		bpy.ops.mesh.reveal()
+		bpy.ops.mesh.select_all(action = 'DESELECT')
+		bpy.ops.mcell.region_faces_select_all()
+		bpy.ops.object.mode_set(mode = 'OBJECT')
+		assigned_set = {f.index for f in mesh.polygons if f.select}
+		unassigned_set = {f.index for f in mesh.polygons if not f.select}
+		neighbors = {}
+		#neighbor_set = set()
+		#bpy.ops.object.mode_set(mode = 'EDIT')
+		if len(unassigned_set) == 0:
+			unassigned_exist = False
+		for f_idx in unassigned_set:
+			f = mesh.polygons[f_idx]
+			for ek in f.edge_keys:
+				#neighbors.add(edge_faces[ek].difference({f_idx}))
+				neighbors[(f_idx, ek)] = list(edge_faces[ek].difference({f_idx}))[0]
+				#neighbor_set.add(neighbors[ek])
+		bpy.ops.object.mode_set(mode = 'EDIT')
+		bpy.ops.mesh.select_all(action = 'DESELECT')
+		while unassigned_exist:
+			#bpy.ops.object.mode_set(mode = 'EDIT')
+			print(str(len(assigned_set)))
+			print (str(len(unassigned_set)))
+
+			assigned_neighbors =assigned_set.intersection(set(neighbors.values()))
+			for f_idx in unassigned_set:
+				region_list = []
+				for ek in mesh.polygons[f_idx].edge_keys:
+					if neighbors[(f_idx, ek)] in assigned_neighbors:
+						reg_name = face_reg_dict[neighbors[(f_idx,ek)]][0]
+						region_list.append(reg_name)
+				#print(region_list)
+
+				if len(region_list) > 0:
+					bpy.ops.object.mode_set(mode = 'OBJECT')
+					mesh.polygons[f_idx].select = True
+					bpy.ops.object.mode_set(mode = 'EDIT')
+					if len(region_list) == 3:
+						if (region_list[0] == region_list[1]) or (region_list[0] == region_list[2]):
+							obj.mcell.regions.region_list[region_list[0]].assign_region_faces(context)
+							reg_name = region_list[0]
+						else:
+							obj.mcell.regions.region_list[region_list[1]].assign_region_faces(context)
+							reg_name = region_list[1]
+					else:
+						obj.mcell.regions.region_list[region_list[0]].assign_region_faces(context)
+						reg_name = region_list[0]
+					face_reg_dict[f_idx] = [reg_name]
+					bpy.ops.mesh.select_all(action = 'DESELECT')
+			bpy.ops.mcell.region_faces_select_all()
+			bpy.ops.object.mode_set(mode = 'OBJECT')
+			assigned_set = {f.index for f in mesh.polygons if f.select}
+			unassigned_set = {f.index for f in mesh.polygons if not f.select}
+			bpy.ops.object.mode_set(mode = 'EDIT')
+			bpy.ops.mesh.select_all(action = 'DESELECT')
+			if len(unassigned_set) == 0:
+				unassigned_exist = False
+
+#			for ek, neighbor in assigned_neighbors:
+#				if neighbors[ek]  
+
+
+
+#			for f_idx in unassigned_list:
+#				bpy.ops.object.mode_set(mode = 'OBJECT')
+#				edge_set = set(mesh.polygons[f_idx].edge_keys)
+#				neighbors = [n_idx for n_idx in assigned_neighbors if len(edge_set.intersection(set(mesh.polygons[n_idx].edge_keys))) == 1]
+#				bpy.ops.object.mode_set(mode = 'EDIT')
+#				bpy.ops.mesh.select_all(action = 'DESELECT')
+#				bpy.ops.object.mode_set(mode = 'OBJECT')
+#				if len(neighbors) != 0:
+#					print(neighbors)
+#					mesh.polygons[neighbors[0]].select = True
+#					bpy.ops.object.mode_set(mode = 'EDIT')
+#					reg_name = obj.mcell.regions.face_get_regions(context).strip()
+#					print(reg_name)
+#					bpy.ops.object.mode_set(mode = 'OBJECT')
+#					if len(neighbors) == 3:
+#						reg_list = [reg_name]
+#						mesh.polygons[neighbors[0]].select = False
+#						for n_idx in neighbors[1:]:
+#							mesh.polygons[n_idx].select = True
+#							bpy.ops.object.mode_set(mode = 'EDIT')
+#							reg_name = obj.mcell.regions.face_get_regions(context).strip()
+#							bpy.ops.object.mode_set(mode = 'OBJECT')
+#							mesh.polygons[n_idx].select = False
+#							if reg_name in reg_list:
+#								break
+#							reg_list.append(reg_name)
+#					bpy.ops.object.mode_set(mode = 'EDIT')
+#					bpy.ops.mesh.select_all(action = 'DESELECT')
+#					bpy.ops.object.mode_set(mode = 'OBJECT')
+#					mesh.polygons[f_idx].select = True
+#					bpy.ops.object.mode_set(mode = 'EDIT')
+#					obj.mcell.regions.region_list[reg_name].assign_region_faces(context)
+#			bpy.ops.object.mode_set(mode = 'EDIT')
+#			bpy.ops.mesh.select_all(action = 'DESELECT')
+#			bpy.ops.mcell.region_faces_select_all()
+#			bpy.ops.object.mode_set(mode = 'OBJECT')
+#			assigned_list = [f.index for f in mesh.polygons if f.select]
+#			unassigned_list = [f.index for f in mesh.polygons if not f.select]
+#			bpy.ops.object.mode_set(mode = 'EDIT')
+#			if len(unassigned_list) == 0:
+#				unassigned_exist = False
+
+
+#			for f in unassigned_list:
+#				edge1 = f.edge_keys[0]
+#				edge2 = f.edge_keys[1]
+#				edge3 = f.edge_keys[2]
+#				neighbors = 0
+#				for face in mesh.polygons:
+#					while neighbors < 2:
+#						if face.edge_keys[0] == edge1 or face.edge_keys[0] == edge2 or face.edge_keys[0] = edge3 or face.edge_keys[1] == edge1 or face.edge_keys[1] == edge2 or face.edge_keys[1] = edge3 or face.edge_keys[2] = edge1 or face.edge_keys[2] = edge1 or face.edge_keys[2] = edge2 :
+#								if neighbors == 0:
+#									neighbor1 = face
+#									neighbors = 1
+#								else:
+#									neighbor2 = face
+#									neighbors =2
+#				bpy.ops.mesh.select_all(action = 'DESELECT')
+
+
+
 #		for o in new_objs:
 #			obj = bpy.data.objects[o]
 #			new_name =  "Neuron" + str(mnm.NN)
@@ -1804,7 +1950,7 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 						ele.radius = r
 						ele.co = (x, y, z)
 						if (length_so_far == 0) and tweak_le:
-							ele.stiffness = 0.6
+							ele.stiffness = 2
 						# Move x, y, z, and r to the next point
 						length_so_far += r/2
 						r = r1 + (length_so_far * dr / segment_length)
