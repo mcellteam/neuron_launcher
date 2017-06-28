@@ -82,6 +82,7 @@ def register():
     
     bpy.types.Scene.make_neuron_meta = bpy.props.PointerProperty(type=swc_mesher.MakeNeuronMetaPropGroup)
     bpy.types.Scene.nrnlauncher = bpy.props.PointerProperty(type=neuron_launcher_gui.NeuronLauncherPropGroup)
+    bpy.types.Object.neuron_cable = bpy.props.PointerProperty(type=swc_mesher.NeuronCablePropGroup)
 
     print("Neuron Launcher registered")
 

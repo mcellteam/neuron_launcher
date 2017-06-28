@@ -42,9 +42,6 @@ class MakeNeuronStick_Operator ( bpy.types.Operator ):
 		context.scene.make_neuron_meta.build_neuron_stick_from_file ( context )
 		return {"FINISHED"}
 
-	def invoke ( self, context, event ):
-		context.scene.make_neuron_meta.build_neuron_stick_from_file ( context )
-		return {"FINISHED"}
 
 class MakeEmptyStick_Operator(bpy.types.Operator):
 	bl_idname = "mnm.make_new_cable"
@@ -59,9 +56,6 @@ class MakeEmptyStick_Operator(bpy.types.Operator):
 		context.scene.make_neuron_meta.make_new_cable_model ( context )
 		return {"FINISHED"}
 
-	def invoke ( self, context, event ):
-		context.scene.make_neuron_meta.make_new_cable_model ( context )
-		return {"FINISHED"}
 
 #######################################################
 #######################################################
@@ -84,9 +78,6 @@ class UpdateCablePostEdit_Operator( bpy.types.Operator ):
 		context.scene.make_neuron_meta.check_duplicate_verts ( context )
 		return {"FINISHED"}
 
-	def invoke ( self, context, event ):
-		context.scene.make_neuron_meta.check_duplicate_verts ( context )
-		return {"FINISHED"}
 
 
 #######################################################
@@ -144,9 +135,6 @@ class MakeSpheres_Operator( bpy.types.Operator ):
 		context.scene.make_neuron_meta.make_spheres_from_object ( context )
 		return {"FINISHED"}
 
-	def invoke ( self, context, event ):
-		context.scene.make_neuron_meta.make_spheres_from_object ( context )
-		return {"FINISHED"}
 
 # Class to update the cable model from the sphere locations/radii
 class UpdateCableFromSpheres_Operator( bpy.types.Operator ):
@@ -162,9 +150,6 @@ class UpdateCableFromSpheres_Operator( bpy.types.Operator ):
 		context.scene.make_neuron_meta.update_cable_model_from_spheres ( context )
 		return {"FINISHED"}
 
-	def invoke ( self, context, event ):
-		context.scene.make_neuron_meta.update_cable_model_from_spheres ( context )
-		return {"FINISHED"}
 
 # Class to show all vertex spheres
 class ShowVertexSpheres_Operator( bpy.types.Operator ):
@@ -180,9 +165,6 @@ class ShowVertexSpheres_Operator( bpy.types.Operator ):
 		context.scene.make_neuron_meta.hide_vertex_spheres ( context, False )
 		return {"FINISHED"}
 
-	def invoke ( self, context, event ):
-		context.scene.make_neuron_meta.hide_vertex_spheres ( context, False )
-		return {"FINISHED"}
 
 # Class to hide all vertex spheres
 class HideVertexSpheres_Operator( bpy.types.Operator ):
@@ -198,9 +180,6 @@ class HideVertexSpheres_Operator( bpy.types.Operator ):
 		context.scene.make_neuron_meta.hide_vertex_spheres ( context, True )
 		return {"FINISHED"}
 
-	def invoke ( self, context, event ):
-		context.scene.make_neuron_meta.hide_vertex_spheres ( context, True )
-		return {"FINISHED"}
 
 # Class to show all vertex spheres
 class DeleteAllVertexSpheres_Operator( bpy.types.Operator ):
@@ -217,10 +196,6 @@ class DeleteAllVertexSpheres_Operator( bpy.types.Operator ):
 		mnm.delete_vertex_spheres ( context )
 		return {"FINISHED"}
 
-	def invoke ( self, context, event ):
-		mnm = context.scene.make_neuron_meta
-		mnm.delete_vertex_spheres ( context )
-		return {"FINISHED"}
 
 
 #######################################################
@@ -320,13 +295,19 @@ class MakeNeuronMetaFile_Operator ( bpy.types.Operator ):
 		mnm = context.scene.make_neuron_meta
 		segments = mnm.read_segments_from_file()
 		mnm.build_neuron_meta_from_segments ( context, segments )
+		obj = context.active_object
+		for s in segments:
+			new = obj.neuron_cable.segments.add()
+			new.parent_idx = s[0][0]
+			new.parent_coords = (s[0][1], s[0][2], s[0][3])
+			new.parent_radius = s[0][4]
+			new.child_idx = s[1][0]
+			new.child_coords = (s[1][1], s[1][2], s[1][3])
+			new.child_radius = s[1][4]
+			new.name = 'sc_%04d_%04d' %(s[0][0],s[1][0])
+			new.seg_length = math.sqrt((s[1][1]-s[0][1])**2+(s[1][2]-s[0][2])**2+(s[1][3]-s[0][3])**2)
 		return {"FINISHED"}
 
-	def invoke ( self, context, event ):
-		mnm = context.scene.make_neuron_meta
-		segments = mnm.read_segments_from_file()
-		mnm.build_neuron_meta_from_segments ( context, segments )
-		return {"FINISHED"}
 
 class MakeNeuronMetaData_Operator ( bpy.types.Operator ):
 	bl_idname = "mnm.make_neuron_from_data"
@@ -337,16 +318,21 @@ class MakeNeuronMetaData_Operator ( bpy.types.Operator ):
 	bl_region_type = "WINDOW"
 	bl_context = "objectmode"
 
-	def execute ( self, context ):
+	def execute ( self, context):
 		mnm = context.scene.make_neuron_meta
 		segments = mnm.read_segments_from_object(context)
 		mnm.build_neuron_meta_from_segments ( context, segments )
-		return {"FINISHED"}
-
-	def invoke ( self, context, event ):
-		mnm = context.scene.make_neuron_meta
-		segments = mnm.read_segments_from_object(context)
-		mnm.build_neuron_meta_from_segments ( context, segments )
+		obj = context.active_object
+		for s in segments:
+			new = obj.neuron_cable.segments.add()
+			new.parent_idx = s[0][0]
+			new.parent_coords = (s[0][1], s[0][2], s[0][3])
+			new.parent_radius = s[0][4]
+			new.child_idx = s[1][0]
+			new.child_coords = (s[1][1], s[1][2], s[1][3])
+			new.child_radius = s[1][4]
+			new.name = 'sc_%04d_%04d' %(s[0][0],s[1][0])
+			new.seg_length = math.sqrt((s[1][1]-s[0][1])**2+(s[1][2]-s[0][2])**2+(s[1][3]-s[0][3])**2)
 		return {"FINISHED"}
 
 class MakeMeshData_Operator ( bpy.types.Operator ):
@@ -367,14 +353,6 @@ class MakeMeshData_Operator ( bpy.types.Operator ):
 		mnm.build_neuron_meta_from_segments ( context, current_segment )
 		return {"FINISHED"}
 
-	def invoke ( self, context, event ):
-		mnm = context.scene.make_neuron_meta
-		current_segment = None
-		segments = mnm.read_segments_from_object(context)
-		obj = mnm.cable_model_list[mnm.active_object_index]
-		current_segment = [segments[obj.active_segment_index]]
-		mnm.build_neuron_meta_from_segments ( context, current_segment )
-		return {"FINISHED"}
 
 class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 	bl_idname = "mnm.make_mesh_corresponding_segments"
@@ -421,7 +399,7 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 		bpy.ops.export_scene.obj(filepath=whole_obj_file_name, axis_forward='Y', axis_up="Z", use_selection=True, use_edges=False, use_normals=False, use_uvs=False, use_materials=False, use_blen_objects=False) 
 		whole_mdl_file_name = os.path.join(tempdir, 'whole_mcell.mdl')
 		print('Converting obj to mdl')
-		make_mdl_cmd = "obj2mcell %s %s > %s" % (obj.name, whole_obj_file_name, whole_mdl_file_name)
+		make_mdl_cmd = "obj2mcell %s %s > %s" % ('New_Neuron', whole_obj_file_name, whole_mdl_file_name)
 		subprocess.check_output([make_mdl_cmd],shell=True)
 		print('Done converting')
 		for o in new_objs:
@@ -441,8 +419,27 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 			subprocess.check_output([insert_reg_cmd],shell=True)
 			os.rename(temp_mdl_file_name, whole_mdl_file_name)
 		bpy.ops.import_mdl_mesh.mdl(filepath = whole_mdl_file_name)
+		obj_new = bpy.context.scene.objects['New_Neuron']
+		obj_orig = bpy.context.scene.objects['Neuron']
+		s_orig = obj_orig.neuron_cable.segments
+		s_new = obj_new.neuron_cable.segments
+		for seg_orig in s_orig:
+			seg_new = s_new.add()
+			seg_new.name = seg_orig.name
+			seg_new.parent_idx = seg_orig.parent_idx
+			seg_new.parent_coords = seg_orig.parent_coords
+			seg_new.parent_radius = seg_orig.parent_radius
+			seg_new.child_idx = seg_orig.child_idx
+			seg_new.child_coords = seg_orig.child_coords
+			seg_new.child_radius = seg_orig.child_radius
+			seg_new.seg_length = seg_orig.seg_length
+		bpy.context.scene.objects.unlink(obj_orig)
+		bpy.data.objects.remove(obj_orig)
+		obj_new.name = 'Neuron'
 		bpy.ops.object.select_all(action = 'DESELECT')
 		obj = bpy.context.scene.objects['Neuron']
+		segments = obj.neuron_cable.segments
+		sorted_s = sorted(segments.items(), key = lambda item: item[1].seg_length)
 		obj.select = True
 		bpy.context.scene.objects.active = obj
 		bpy.ops.object.mode_set(mode = 'EDIT')
@@ -455,7 +452,11 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 		context.tool_settings.mesh_select_mode = (False, False, True)
 		bpy.ops.object.mode_set(mode = 'OBJECT')
 		bpy.ops.object.mode_set(mode = 'EDIT')
-		bpy.ops.mcell.eliminate_all_overlaps()
+		for item in sorted_s:
+			reg = context.object.mcell.regions.region_list[item[1].name]
+			reg.eliminate_overlapping_faces(context)
+			print('Eliminated overlaps from region', reg.name)
+#		bpy.ops.mcell.eliminate_all_overlaps()
 		bpy.ops.object.mode_set(mode = 'OBJECT')
 		face_reg_dict = obj.mcell.get_face_regions_dictionary(obj)
 
@@ -712,10 +713,6 @@ class MakeNeuronMetaAnalyze_Operator ( bpy.types.Operator ):
 		context.scene.make_neuron_meta.read_segments_from_file()
 		return {"FINISHED"}
 
-	def invoke ( self, context, event ):
-		context.scene.make_neuron_meta.read_segments_from_file()
-		return {"FINISHED"}
-
 
 def file_name_change ( self, context ):
 	context.scene.make_neuron_meta.file_name_change()
@@ -749,6 +746,21 @@ def active_obj_index_changed (self, context):
 				#deselect
 				if o.select:
 					o.select = False
+
+class NeuronCableSegment(bpy.types.PropertyGroup):
+	parent_idx = IntProperty (default = -1)
+	parent_coords = FloatVectorProperty() #(default = [0.0, 0.0, 0.0])
+	parent_radius = FloatProperty(default = -1.0)
+	child_idx = IntProperty (default = -1)
+	child_coords = FloatVectorProperty() #(default = [0.0, 0.0, 0.0])
+	child_radius = FloatProperty(default = -1.0)
+	seg_length = FloatProperty(default =-1.0)
+
+
+
+class NeuronCablePropGroup(bpy.types.PropertyGroup):
+	segments = CollectionProperty (type = NeuronCableSegment, name = "Segments of neuron cable")
+
 
 class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 	# frames_dir = StringProperty(name="frames_dir", default="")
@@ -1950,7 +1962,7 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 						ele.radius = r
 						ele.co = (x, y, z)
 						if (length_so_far == 0) and tweak_le:
-							ele.stiffness = 2
+							ele.stiffness = 1
 						# Move x, y, z, and r to the next point
 						length_so_far += r/2
 						r = r1 + (length_so_far * dr / segment_length)
