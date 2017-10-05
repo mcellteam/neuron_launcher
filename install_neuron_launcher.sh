@@ -1,16 +1,9 @@
 #!/usr/bin/env bash
 
-# Find the system type and Python version
-if [ "$(uname)" == "Darwin" ]; then
-    # Mac OS X
-    INSTALL_DIR=~/Library/Application\ Support/Blender/2.78/scripts/addons
-elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-    # GNU/Linux
-    INSTALL_DIR=~/.config/blender/2.78/scripts/addons
-else
-	echo "Error: cannot determine system - check install script."
-	return
-fi
+# neuron_launcher will be installed here. This should typically be a link to the desired location on your platform.
+# For example, for a link pointing into a MacOSX bundle: ln -s /Applications/Blender-2.78c-CellBlender/blender.app/Contents/Resources/2.78/scripts/addons/ ~/my_blender_addons_link
+
+INSTALL_DIR=~/my_blender_addons_link/
 
 # Install neuron launcher
 if [ -d "$INSTALL_DIR/neuron_launcher" ]; then
