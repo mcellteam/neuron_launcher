@@ -9,6 +9,7 @@ import subprocess
 import sys
 import os
 import tempfile
+import shutil
 
 from bpy_extras.io_utils import ExportHelper
 
@@ -364,6 +365,7 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 	bl_context = "object"
 
 	def execute ( self, context ):
+		bpy.ops.mcell.init_cellblender()
 		mnm = context.scene.make_neuron_meta
 		current_segment = None
 		obj = mnm.cable_model_list[mnm.active_object_index]
@@ -394,7 +396,8 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 		obj = bpy.context.scene.objects['Neuron']
 		obj.select = True
 		bpy.context.scene.objects.active = obj
-		tempdir = tempfile.gettempdir()
+		tempdir = tempfile.mkdtemp()
+		#tempdir = my_tempdir.name
 		whole_obj_file_name = os.path.join(tempdir, 'whole_mesh.obj')
 		bpy.ops.export_scene.obj(filepath=whole_obj_file_name, axis_forward='Y', axis_up="Z", use_selection=True, use_edges=False, use_normals=False, use_uvs=False, use_materials=False, use_blen_objects=False) 
 		whole_mdl_file_name = os.path.join(tempdir, 'whole_mcell.mdl')
@@ -417,10 +420,19 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 			temp_mdl_file_name = os.path.join(tempdir, 'TempFile.mdl')
 			insert_reg_cmd = "insert_mdl_region.py %s %s > %s" %(whole_mdl_file_name, seg_mdl_tag_file_name, temp_mdl_file_name)
 			subprocess.check_output([insert_reg_cmd],shell=True)
-			os.rename(temp_mdl_file_name, whole_mdl_file_name)
-		bpy.ops.import_mdl_mesh.mdl(filepath = whole_mdl_file_name)
+			os.replace(temp_mdl_file_name, whole_mdl_file_name)
+		os.sync()
+		try:
+			bpy.ops.import_mdl_mesh.mdl(filepath = whole_mdl_file_name)
+		except:
+			#shutil.rmtree(tempdir)
+			print('Import unsuccessful')
+			return{'FINISHED'}
+		#shutil.rmtree(tempdir)
 		obj_new = bpy.context.scene.objects['New_Neuron']
+		bpy.ops.object.select_all(action = 'DESELECT')
 		obj_orig = bpy.context.scene.objects['Neuron']
+		obj_orig.select = True
 		s_orig = obj_orig.neuron_cable.segments
 		s_new = obj_new.neuron_cable.segments
 		for seg_orig in s_orig:
@@ -435,6 +447,9 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 			seg_new.seg_length = seg_orig.seg_length
 		bpy.context.scene.objects.unlink(obj_orig)
 		bpy.data.objects.remove(obj_orig)
+		obj_new.select = True
+		print('Removing the object', obj_new.name)
+		bpy.ops.mcell.model_objects_remove_sel()
 		obj_new.name = 'Neuron'
 		bpy.ops.object.select_all(action = 'DESELECT')
 		obj = bpy.context.scene.objects['Neuron']
@@ -456,6 +471,7 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 			reg = context.object.mcell.regions.region_list[item[1].name]
 			reg.eliminate_overlapping_faces(context)
 			print('Eliminated overlaps from region', reg.name)
+
 #		bpy.ops.mcell.eliminate_all_overlaps()
 		bpy.ops.object.mode_set(mode = 'OBJECT')
 		face_reg_dict = obj.mcell.get_face_regions_dictionary(obj)
