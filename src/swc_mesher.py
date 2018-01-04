@@ -1523,6 +1523,7 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 	def read_segments_from_file ( self ):
 		# Read in the data
 		segments = []
+		soma = []
 		
 		print ( "Reading from file " + self.neuron_file_name )
 
@@ -1615,7 +1616,27 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 			# Next create the list of segments - one for each child that has a parent
 			for k in point_keys:
 				child_fields = point_dict[k]
-				if child_fields[6] in point_keys:
+				if (child_fields[6]== -1):
+					#This point is the soma
+					pn = int(child_fields[0])
+					px = float(child_fields[2])
+					py = float(child_fields[3])
+					pz = float(child_fields[4])
+					pr = float(child_fields[5])
+					soma = [[pn, px, py, pz, pr]]
+						
+					
+				elif (child_fields[child_fields[6]] == -1):
+					# these points are going to be included in soma and change the shape of the soma 
+					cn = int(child_fields[0])
+					cx = float(child_fields[2])
+					cy = float(child_fields[3])
+					cz = float(child_fields[4])
+					cr = float(child_fields[5])
+					soma = soma + [[cn, cx, cy, cz, cr]]
+
+					segments = segments + [[soma, []]]
+				else:
 					# This point has a parent, so make a segment from parent to child
 					parent_fields = point_dict[child_fields[6]]
 					pn = int(parent_fields[0])
@@ -1628,8 +1649,12 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 					cy = float(child_fields[3])
 					cz = float(child_fields[4])
 					cr = float(child_fields[5])
+					if (parent_fields[6] == 1):
+						pn = 1
 					segments = segments + [ [ [pn, px, py, pz, pr], [cn, cx, cy, cz, cr] ] ]
 					num_total_segments += 1
+
+
 
 		else:
 
