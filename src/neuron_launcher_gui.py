@@ -617,8 +617,8 @@ class NeuronLauncherPropGroup(bpy.types.PropertyGroup):
             row = box.row()
             split = box.split()
             col = split.column(align=True)
-            col.label("Attempt to create surface regions")
-            col.operator("nrnlauncher.make_surface_regions")
+            # col.label("Attempt to create surface regions")
+            # col.operator("nrnlauncher.make_surface_regions_V2")
 
             row = box.row()
             split = box.split()

@@ -293,6 +293,7 @@ class MakeNeuronMetaFile_Operator ( bpy.types.Operator ):
 	bl_context = "objectmode"
 
 	def execute ( self, context ):
+		print("I'm here!")
 		mnm = context.scene.make_neuron_meta
 		segments = mnm.read_segments_from_file()
 		mnm.build_neuron_meta_from_segments ( context, segments )
@@ -307,6 +308,7 @@ class MakeNeuronMetaFile_Operator ( bpy.types.Operator ):
 			new.child_radius = s[1][4]
 			new.name = 'sc_%04d_%04d' %(s[0][0],s[1][0])
 			new.seg_length = math.sqrt((s[1][1]-s[0][1])**2+(s[1][2]-s[0][2])**2+(s[1][3]-s[0][3])**2)
+			__import__('code').interact(local={k: v for ns in (globals(), locals()) for k, v in ns.items()})
 		return {"FINISHED"}
 
 
@@ -784,6 +786,7 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 	neuron_file_data = StringProperty ( default="" )
 
 	convert_to_mesh = BoolProperty ( name="Convert to Mesh", default=True )
+	spherical_soma = BoolProperty ( name="Spherical Soma", default=True)
 	show_analysis = BoolProperty ( default=False )
 	show_stick    = BoolProperty ( default=False )
 	file_analyzed = BoolProperty ( default=False )
@@ -964,6 +967,8 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 			row = box.row()
 			subbox = row.box()
 
+			row = subbox.row()
+			row.prop ( self, "spherical_soma", text="Make the soma a sphere" )
 			row = subbox.row()
 			row.prop ( self, "scale_file_data", text="Scale File Factor" )
 			row = subbox.row()
@@ -1495,16 +1500,18 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 				# This point has a parent, so make a segment from parent to child
 				parent_fields = point_dict[child_fields[6]]
 				pn = int(parent_fields[0])
+				pt = int(parent_fields[1])
 				px = float(parent_fields[2])
 				py = float(parent_fields[3])
 				pz = float(parent_fields[4])
 				pr = float(parent_fields[5])
 				cn = int(child_fields[0])
+				ct = int(child_fields[1])
 				cx = float(child_fields[2])
 				cy = float(child_fields[3])
 				cz = float(child_fields[4])
 				cr = float(child_fields[5])
-				segments = segments + [ [ [pn, px, py, pz, pr], [cn, cx, cy, cz, cr] ] ]
+				segments = segments + [ [ [pn, px, py, pz, pr, pt], [cn, cx, cy, cz, cr, ct] ] ]
 				num_total_segments += 1
 
 		if self.num_segs_limit > 0:
@@ -1609,7 +1616,8 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 					if l[0] != "#":
 						fields = l.split()
 						point_dict[fields[0]] = fields
-			point_keys = sorted ( [ k for k in point_dict.keys() ] )
+			#point_keys = sorted ( [ k for k in point_dict.keys() ] )
+			point_keys = list(map(str,sorted(list(map(int, point_dict.keys())))))
 			self.num_lines_in_file = len(point_keys)
 			self.num_nodes_in_file = len(point_keys)
 
@@ -1643,18 +1651,21 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 					# This point has a parent, so make a segment from parent to child
 					parent_fields = point_dict[child_fields[6]]
 					pn = int(parent_fields[0])
+					pt = int(parent_fields[1])
 					px = float(parent_fields[2])
 					py = float(parent_fields[3])
 					pz = float(parent_fields[4])
 					pr = float(parent_fields[5])
 					cn = int(child_fields[0])
+					ct = int(child_fields[1])
 					cx = float(child_fields[2])
 					cy = float(child_fields[3])
 					cz = float(child_fields[4])
 					cr = float(child_fields[5])
 					if (parent_fields[6] == 1):
 						pn = 1
-					segments = segments + [ [ [pn, px, py, pz, pr], [cn, cx, cy, cz, cr] ] ]
+					segments = segments + [ [ [pn, px, py, pz, pr, pt], [cn, cx, cy, cz, cr, ct] ] ]
+					#__import__('code').interact(local={k: v for ns in (globals(), locals()) for k, v in ns.items()})
 					num_total_segments += 1
 
 
@@ -1950,6 +1961,11 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 		mball.render_resolution = self.mesh_resolution
 
 		# Generate the metashape segments from the branch segments
+
+		if self.spherical_soma:
+		 	if (segments[1][0][5] == 1 and segments[1][1][5] == 1):
+		 		# The first line is a soma, use it's radius to make a sphere)
+		 		pass
 
 		seg_num = 1
 		obj_name = None
