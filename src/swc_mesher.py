@@ -1963,84 +1963,256 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 		# Generate the metashape segments from the branch segments
 
 		if self.spherical_soma:
-		 	if (segments[1][0][5] == 1 and segments[1][1][5] == 1):
-		 		# The first line is a soma, use it's radius to make a sphere)
-		 		pass
+			if (segments[0][0][5] == 1 and segments[0][1][5] == 1 and segments[1][0][5] == 1 and segments[1][1][5] ==1 and segments[0][0][4] == segments[0][1][4] and segments[0][0][4] == segments[1][1][4]):
+		 		# The first 3 lines is are the soma, use the radius to make a sphere)
+				r = segments[0][0][4]
+				ele = mball.elements.new()
+				ele.radius = r
+				seg_num = 1
+				obj_name = None
+				for seg in segments[3:]:
+					print("=== Building Branch " + str(seg_num) + " ===")
+					seg_num += 1
+					for c in seg:
+						if (lc != None):
+							print ("Building segment with radius of " + str(lc[4]) + " and " + str(c[4]) )
 
-		seg_num = 1
-		obj_name = None
-		for seg in segments:
-			print ( "=== Building Branch " + str(seg_num) + " ===" )
-			seg_num += 1
-			lc = None
-			for c in seg:
-				if (lc != None):  # and (seg_num < 20):
+							if seg[0][5] != 1:
+								x1 = float(lc[1]) * self.scale_file_data
+								y1 = float(lc[2]) * self.scale_file_data
+								z1 = float(lc[3]) * self.scale_file_data
+								r1 = float(lc[4]) * self.scale_file_data
+								x2 = float(c[1]) * self.scale_file_data
+								y2 = float(c[2]) * self.scale_file_data
+								z2 = float(c[3]) * self.scale_file_data
+								r2 = float(c[4]) * self.scale_file_data
 
-					print ( "Building segment with radius of " + str(lc[4]) + " and " + str(c[4]) )
+								segment_vector = mathutils.Vector ( ( (x2-x1), (y2-y1), (z2 - z1) ) )
+								segment_length = segment_vector.length
 
-					x1 = float(lc[1]) * self.scale_file_data
-					y1 = float(lc[2]) * self.scale_file_data
-					z1 = float(lc[3]) * self.scale_file_data
-					r1 = float(lc[4]) * self.scale_file_data
-					x2 = float(c[1]) * self.scale_file_data
-					y2 = float(c[2]) * self.scale_file_data
-					z2 = float(c[3]) * self.scale_file_data
-					r2 = float(c[4]) * self.scale_file_data
+								if segment_length < 0:
+									segment_length = 0.01
+								if r1 < segment_length / 1000:
+									r1 = segment_length / 1000
+								if r2 < segmetn_length / 1000:
+									r2 = segment_length / 1000
 
-					# Make the segment from a series of meta balls
+								if r1 < self.min_forced_radius:
+									r1 = self.min_forced_radius
+								if r2 < self.min_forced_radius:
+									r2 = self.min_forced_radius
 
-					segment_vector = mathutils.Vector ( ( (x2-x1), (y2-y1), (z2-z1) ) )
-					segment_length = segment_vector.length
+								dr = r2 - r1
+								dx = x2 - x1
+								dy = y2 - y1
+								dz = z2 - z1
 
-					# Be sure that the radiuses are non-zero
-					if segment_length < 0:
-						segment_length = 0.01
-					if r1 < segment_length / 1000:
-						r1 = segment_length / 1000
-					if r2 < segment_length / 1000:
-						r2 = segment_length / 1000
+								r = r1
+								x = x1
+								y = y1
+								z = z1
 
-					if r1 < self.min_forced_radius:
-						r1 = self.min_forced_radius
-					if r2 < self.min_forced_radius:
-						r2 = self.min_forced_radius
+								length_so_far = 0
+								while length_so_far < segment_length:
+									ele = mball.elements.new()
+									ele.radius = r
+									ele.co = (x, y, z)
+									if (length_so_far == 0) and tweak_le:
+										ele.stiffness = 1
+									
+									length_so_far += r/2
+									r = r1 + (length_so_far * dr / segment_length)
+									x = x1 + (length_so_far * dx / segment_length)
+									y = y1 + (length_so_far * dy / segment_length)
+									z = z1 + (length_so_far * dz / segment_length)
 
-					dr = r2 - r1
-					dx = x2 - x1
-					dy = y2 - y1
-					dz = z2 - z1
+								if tweak_le:
+									ele.stiffness = 0.6
 
-					r = r1
-					x = x1
-					y = y1
-					z = z1
 
-					length_so_far = 0
-					while length_so_far < segment_length:
-						# Make a sphere at this point
-						ele = mball.elements.new()
-						ele.radius = r
-						ele.co = (x, y, z)
-						if (length_so_far == 0) and tweak_le:
-							ele.stiffness = 1
-						# Move x, y, z, and r to the next point
-						length_so_far += r/2
-						r = r1 + (length_so_far * dr / segment_length)
-						x = x1 + (length_so_far * dx / segment_length)
-						y = y1 + (length_so_far * dy / segment_length)
-						z = z1 + (length_so_far * dz / segment_length)
-					# Tweak stiffness of the last metaball in the segment
-					if tweak_le:
-						ele.stiffness = 0.6
+							elif seg[0] != segments[0][0]:
+								x1 = float(lc[1]) * self.scale_file_data
+								y1 = float(lc[2]) * self.scale_file_data
+								z1 = float(lc[3]) * self.scale_file_data
+								r1 = float(c[4]) * self.scale_file_data
+								x2 = float(c[1]) * self.scale_file_data
+								y2 = float(c[2]) * self.scale_file_data
+								z2 = float(c[3]) * self.scale_file_data
+								r2 = float(c[4]) * self.scale_file_data
 
-					# Make the last one just to be sure
+								segment_vector = mathutils.Vector ( ( (x2-x1), (y2-y1), (z2 - z1) ) )
+								segment_length = segment_vector.length
 
-					#ele = mball.elements.new()
-					#ele.radius = r2
-					#ele.co = (x2, y2, z2)
+								if segment_length < 0:
+									segment_length = 0.01
+								if r1 < segment_length / 1000:
+									r1 = segment_length / 1000
+								if r2 < segmetn_length / 1000:
+									r2 = segment_length / 1000
 
-					# obj_name = self.add_segment ( obj_name, p1=mathutils.Vector((x1,y1,z1)), p2=mathutils.Vector((x2,y2,z2)), r1=r1, r2=r2, faces=10, cap1=cap1, cap2=True )
-				lc = c
+								if r1 < self.min_forced_radius:
+									r1 = self.min_forced_radius
+								if r2 < self.min_forced_radius:
+									r2 = self.min_forced_radius
+
+								dr = r2 - r1
+								dx = x2 - x1
+								dy = y2 - y1
+								dz = z2 - z1
+
+								r = r1
+								x = x1
+								y = y1
+								z = z1
+
+								length_so_far = 0
+								while length_so_far < segment_length:
+									ele = mball.elements.new()
+									ele.radius = r
+									ele.co = (x, y, z)
+									if (length_so_far == 0) and tweak_le:
+										ele.stiffness = 1
+									
+									length_so_far += r/2
+									r = r1 + (length_so_far * dr / segment_length)
+									x = x1 + (length_so_far * dx / segment_length)
+									y = y1 + (length_so_far * dy / segment_length)
+									z = z1 + (length_so_far * dz / segment_length)
+
+								if tweak_le:
+									ele.stiffness = 0.6
+
+							else:
+								x1 = float(lc[1]) * self.scale_file_data
+								y1 = float(lc[2]) * self.scale_file_data
+								z1 = float(lc[3]) * self.scale_file_data
+								r1 = float(c[4]) * self.scale_file_data
+								x2 = float(c[1]) * self.scale_file_data
+								y2 = float(c[2]) * self.scale_file_data
+								z2 = float(c[3]) * self.scale_file_data
+								r2 = float(c[4]) * self.scale_file_data
+
+								segment_vector = mathutils.Vector ( ( (x2-x1), (y2-y1), (z2 - z1) ) )
+								segment_length = segment_vector.length
+
+								if segment_length < 0:
+									segment_length = 0.01
+								if r1 < segment_length / 1000:
+									r1 = segment_length / 1000
+								if r2 < segmetn_length / 1000:
+									r2 = segment_length / 1000
+
+								if r1 < self.min_forced_radius:
+									r1 = self.min_forced_radius
+								if r2 < self.min_forced_radius:
+									r2 = self.min_forced_radius
+
+								dr = r2 - r1
+								dx = x2 - x1
+								dy = y2 - y1
+								dz = z2 - z1
+
+								r = r1
+								x = x1
+								y = y1
+								z = z1
+
+								length_so_far = 0
+								while length_so_far < segment_length:
+									ele = mball.elements.new()
+									ele.radius = r
+									ele.co = (x, y, z)
+									if (length_so_far == 0) and tweak_le:
+										ele.stiffness = 1
+									
+									length_so_far += r/2
+									r = r1 + (length_so_far * dr / segment_length)
+									x = x1 + (length_so_far * dx / segment_length)
+									y = y1 + (length_so_far * dy / segment_length)
+									z = z1 + (length_so_far * dz / segment_length)
+
+								if tweak_le:
+									ele.stiffness = 0.6
+
+						lc = c
+
+
+		else:		
+
+			seg_num = 1
+			obj_name = None
+			for seg in segments:
+				print ( "=== Building Branch " + str(seg_num) + " ===" )
+				seg_num += 1
+				lc = None
+				for c in seg:
+					if (lc != None):  # and (seg_num < 20):
+
+						print ( "Building segment with radius of " + str(lc[4]) + " and " + str(c[4]) )
+
+						x1 = float(lc[1]) * self.scale_file_data
+						y1 = float(lc[2]) * self.scale_file_data
+						z1 = float(lc[3]) * self.scale_file_data
+						r1 = float(lc[4]) * self.scale_file_data
+						x2 = float(c[1]) * self.scale_file_data
+						y2 = float(c[2]) * self.scale_file_data
+						z2 = float(c[3]) * self.scale_file_data
+						r2 = float(c[4]) * self.scale_file_data
+
+						# Make the segment from a series of meta balls
+
+						segment_vector = mathutils.Vector ( ( (x2-x1), (y2-y1), (z2-z1) ) )
+						segment_length = segment_vector.length
+
+						# Be sure that the radiuses are non-zero
+						if segment_length < 0:
+							segment_length = 0.01
+						if r1 < segment_length / 1000:
+							r1 = segment_length / 1000
+						if r2 < segment_length / 1000:
+							r2 = segment_length / 1000
+
+						if r1 < self.min_forced_radius:
+							r1 = self.min_forced_radius
+						if r2 < self.min_forced_radius:
+							r2 = self.min_forced_radius
+
+						dr = r2 - r1
+						dx = x2 - x1
+						dy = y2 - y1
+						dz = z2 - z1
+
+						r = r1
+						x = x1
+						y = y1
+						z = z1
+
+						length_so_far = 0
+						while length_so_far < segment_length:
+							# Make a sphere at this point
+							ele = mball.elements.new()
+							ele.radius = r
+							ele.co = (x, y, z)
+							if (length_so_far == 0) and tweak_le:
+								ele.stiffness = 1
+							# Move x, y, z, and r to the next point
+							length_so_far += r/2
+							r = r1 + (length_so_far * dr / segment_length)
+							x = x1 + (length_so_far * dx / segment_length)
+							y = y1 + (length_so_far * dy / segment_length)
+							z = z1 + (length_so_far * dz / segment_length)
+						# Tweak stiffness of the last metaball in the segment
+						if tweak_le:
+							ele.stiffness = 0.6
+
+						# Make the last one just to be sure
+
+						#ele = mball.elements.new()
+						#ele.radius = r2
+						#ele.co = (x2, y2, z2)
+
+						# obj_name = self.add_segment ( obj_name, p1=mathutils.Vector((x1,y1,z1)), p2=mathutils.Vector((x2,y2,z2)), r1=r1, r2=r2, faces=10, cap1=cap1, cap2=True )
+					lc = c
 
 		obj.select = True
 		bpy.context.scene.objects.active = obj
