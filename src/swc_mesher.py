@@ -41,6 +41,9 @@ class MakeNeuronStick_Operator ( bpy.types.Operator ):
 
 	def execute ( self, context ):
 		context.scene.make_neuron_meta.build_neuron_stick_from_file ( context )
+		mnm = context.scene.make_neuron_meta
+		#obj = mnm.cable_model_list[mnm.active_object_index]
+		active_obj_index_changed (mnm, context)
 		return {"FINISHED"}
 
 
@@ -293,7 +296,7 @@ class MakeNeuronMetaFile_Operator ( bpy.types.Operator ):
 	bl_context = "objectmode"
 
 	def execute ( self, context ):
-		print("I'm here!")
+		#print("I'm here!")
 		mnm = context.scene.make_neuron_meta
 		segments = mnm.read_segments_from_file()
 		mnm.build_neuron_meta_from_segments ( context, segments )
@@ -308,6 +311,7 @@ class MakeNeuronMetaFile_Operator ( bpy.types.Operator ):
 			new.child_radius = s[1][4]
 			new.name = 'sc_%04d_%04d' %(s[0][0],s[1][0])
 			new.seg_length = math.sqrt((s[1][1]-s[0][1])**2+(s[1][2]-s[0][2])**2+(s[1][3]-s[0][3])**2)
+			new.seg_type = s[1][5]
 			#__import__('code').interact(local={k: v for ns in (globals(), locals()) for k, v in ns.items()})
 		return {"FINISHED"}
 
@@ -336,6 +340,7 @@ class MakeNeuronMetaData_Operator ( bpy.types.Operator ):
 			new.child_radius = s[1][4]
 			new.name = 'sc_%04d_%04d' %(s[0][0],s[1][0])
 			new.seg_length = math.sqrt((s[1][1]-s[0][1])**2+(s[1][2]-s[0][2])**2+(s[1][3]-s[0][3])**2)
+			new.seg_type = s[1][5]
 		return {"FINISHED"}
 
 class MakeMeshData_Operator ( bpy.types.Operator ):
@@ -377,6 +382,13 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 #		bpy.ops.mesh.select_all(action = 'SELECT')
 #		bpy.ops.mesh.quads_convert_to_tris()
 		bpy.ops.object.mode_set(mode = 'OBJECT')
+		bpy.ops.object.select_all(action = 'SELECT')
+		bpy.ops.gamer.coarse_flat()
+		bpy.ops.gamer.smooth()
+		bpy.ops.gamer.coarse_flat()
+		bpy.ops.gamer.smooth()
+		bpy.ops.gamer.coarse_flat()
+		bpy.ops.gamer.smooth()
 #		bpy.ops.gamer.smooth()
 		old_objs = bpy.data.objects.keys()
 		bpy.ops.object.select_all(action = 'DESELECT')
@@ -423,6 +435,7 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 			insert_reg_cmd = "insert_mdl_region.py %s %s > %s" %(whole_mdl_file_name, seg_mdl_tag_file_name, temp_mdl_file_name)
 			subprocess.check_output([insert_reg_cmd],shell=True)
 			os.replace(temp_mdl_file_name, whole_mdl_file_name)
+			bpy.data.objects[o].hide = True
 		os.sync()
 		try:
 			bpy.ops.import_mdl_mesh.mdl(filepath = whole_mdl_file_name)
@@ -447,6 +460,7 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 			seg_new.child_coords = seg_orig.child_coords
 			seg_new.child_radius = seg_orig.child_radius
 			seg_new.seg_length = seg_orig.seg_length
+			seg_new.seg_type = seg_orig.seg_type
 		bpy.context.scene.objects.unlink(obj_orig)
 		bpy.data.objects.remove(obj_orig)
 		obj_new.select = True
@@ -457,6 +471,10 @@ class MakeCompleteMeshData_Operator ( bpy.types.Operator ):
 		obj = bpy.context.scene.objects['Neuron']
 		segments = obj.neuron_cable.segments
 		sorted_s = sorted(segments.items(), key = lambda item: item[1].seg_length)
+		for item in sorted_s:
+			if item[1].seg_type == 1:
+				sorted_s.insert(len(sorted_s), sorted_s.pop(sorted_s.index(item)))
+
 		obj.select = True
 		bpy.context.scene.objects.active = obj
 		bpy.ops.object.mode_set(mode = 'EDIT')
@@ -773,6 +791,7 @@ class NeuronCableSegment(bpy.types.PropertyGroup):
 	child_coords = FloatVectorProperty() #(default = [0.0, 0.0, 0.0])
 	child_radius = FloatProperty(default = -1.0)
 	seg_length = FloatProperty(default =-1.0)
+	seg_type = IntProperty (default = -1)
 
 
 
@@ -796,7 +815,7 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 	largest_radius_in_file = FloatProperty ( default=-1 )
 	smallest_radius_in_file = FloatProperty ( default=-1 )
 	default_radius = FloatProperty ( name="R", default=0.001 )
-	radius_dr = FloatProperty ( name="dr", default=0.01,  description = "The difference between the radii of the entire mesh and the segments")
+	radius_dr = FloatProperty ( name="dr", default=1.02,  description = "The ratio between the radii of the entire mesh and the segments")
 	min_x = FloatProperty ( default=-1 )
 	max_x = FloatProperty ( default=-1 )
 	min_y = FloatProperty ( default=-1 )
@@ -1441,6 +1460,8 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 		obj = bpy.data.objects[obj_name]
 
 		# Make sure it's active and selected
+		# bpy.ops.object.mode_set(mode = 'OBJECT')
+		# bpy.ops.object.select_all(action = 'DESELECT')
 		context.scene.objects.active = obj
 		obj.select = True
 
@@ -1471,11 +1492,15 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 			x = v.co.x
 			y = v.co.y
 			z = v.co.z
+			P = int(parent_index_layer.data[i].value)
 			if use_dr:
-				R = radius_layer.data[i].value + self.radius_dr
+				if T != 1 and P == 1:
+					R = radius_layer.data[i].value * 1.5
+				else:
+					R = radius_layer.data[i].value * self.radius_dr
 			else:
 				R = radius_layer.data[i].value
-			P = int(parent_index_layer.data[i].value)
+			
 			# P = (packed_layer.data[i].value >> 3) & 0x03fff
 
 			# For some reason, many of these fields need to be swapped!!
@@ -1970,7 +1995,7 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 				ele.radius = r
 				seg_num = 1
 				obj_name = None
-				for seg in segments[3:]:
+				for seg in segments[2:]:
 					print("=== Building Branch " + str(seg_num) + " ===")
 					seg_num += 1
 					lc = None
@@ -2028,14 +2053,14 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 									z = z1 + (length_so_far * dz / segment_length)
 
 								if tweak_le:
-									ele.stiffness = 0.6
+									ele.stiffness = 0.8
 
 
 							elif seg[0] != segments[0][0]:
 								x1 = float(lc[1]) * self.scale_file_data
 								y1 = float(lc[2]) * self.scale_file_data
 								z1 = float(lc[3]) * self.scale_file_data
-								r1 = float(c[4]) * self.scale_file_data
+								r1 = float(lc[4]) * self.scale_file_data
 								x2 = float(c[1]) * self.scale_file_data
 								y2 = float(c[2]) * self.scale_file_data
 								z2 = float(c[3]) * self.scale_file_data
@@ -2139,72 +2164,150 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 
 
 			else:		
-				__import__('code').interact(local={k: v for ns in (globals(), locals()) for k, v in ns.items()})
+				#__import__('code').interact(local={k: v for ns in (globals(), locals()) for k, v in ns.items()})
 				seg_num = 1
 				obj_name = None
+				soma_done = False
 				for seg in segments:
-					print ( "=== Building Branch " + str(seg_num) + " ===" )
-					seg_num += 1
 					lc = None
-					for c in seg:
-						if (lc != None):  # and (seg_num < 20):
+					if seg[0][5] == 1 and seg[1][5] == 1 and not soma_done:
+						r = (seg[0][4])
+						ele = mball.elements.new()
+						ele.radius = r
+						soma_done = True
+						print ( "=== Building Branch " + str(seg_num) + " ===" )
+						seg_num += 1
+					elif seg[0][5] == 1 and seg[1][5] ==1:
+						seg_num += 1
+					elif seg[0][5] == 1:
+						print ( "=== Building Branch " + str(seg_num) + " ===" )
+						seg_num += 1
+						for c in seg:
+							if (lc != None):  # and (seg_num < 20):
 
-							print ( "Building segment with radius of " + str(lc[4]) + " and " + str(c[4]) )
+								print ( "Building segment with radius of " + str(lc[4]) + " and " + str(c[4]) )
 
-							x1 = float(lc[1]) * self.scale_file_data
-							y1 = float(lc[2]) * self.scale_file_data
-							z1 = float(lc[3]) * self.scale_file_data
-							r1 = float(lc[4]) * self.scale_file_data
-							x2 = float(c[1]) * self.scale_file_data
-							y2 = float(c[2]) * self.scale_file_data
-							z2 = float(c[3]) * self.scale_file_data
-							r2 = float(c[4]) * self.scale_file_data
+								x1 = float(lc[1]) * self.scale_file_data
+								y1 = float(lc[2]) * self.scale_file_data
+								z1 = float(lc[3]) * self.scale_file_data
+								r1 = float(c[4]) * self.scale_file_data
+								x2 = float(c[1]) * self.scale_file_data
+								y2 = float(c[2]) * self.scale_file_data
+								z2 = float(c[3]) * self.scale_file_data
+								r2 = float(c[4]) * self.scale_file_data
 
-							# Make the segment from a series of meta balls
+								# Make the segment from a series of meta balls
 
-							segment_vector = mathutils.Vector ( ( (x2-x1), (y2-y1), (z2-z1) ) )
-							segment_length = segment_vector.length
+								segment_vector = mathutils.Vector ( ( (x2-x1), (y2-y1), (z2-z1) ) )
+								segment_length = segment_vector.length
 
-							# Be sure that the radiuses are non-zero
-							if segment_length < 0:
-								segment_length = 0.01
-							if r1 < segment_length / 1000:
-								r1 = segment_length / 1000
-							if r2 < segment_length / 1000:
-								r2 = segment_length / 1000
+								# Be sure that the radiuses are non-zero
+								if segment_length < 0:
+									segment_length = 0.01
+								if r1 < segment_length / 1000:
+									r1 = segment_length / 1000
+								if r2 < segment_length / 1000:
+									r2 = segment_length / 1000
 
-							if r1 < self.min_forced_radius:
-								r1 = self.min_forced_radius
-							if r2 < self.min_forced_radius:
-								r2 = self.min_forced_radius
+								if r1 < self.min_forced_radius:
+									r1 = self.min_forced_radius
+								if r2 < self.min_forced_radius:
+									r2 = self.min_forced_radius
 
-							dr = r2 - r1
-							dx = x2 - x1
-							dy = y2 - y1
-							dz = z2 - z1
+								dr = r2 - r1
+								dx = x2 - x1
+								dy = y2 - y1
+								dz = z2 - z1
 
-							r = r1
-							x = x1
-							y = y1
-							z = z1
+								r = r1
+								x = x1
+								y = y1
+								z = z1
 
-							length_so_far = 0
-							while length_so_far < segment_length:
-								# Make a sphere at this point
-								ele = mball.elements.new()
-								ele.radius = r
-								ele.co = (x, y, z)
-								if (length_so_far == 0) and tweak_le:
-									ele.stiffness = 1
-								# Move x, y, z, and r to the next point
-								length_so_far += r/2
-								r = r1 + (length_so_far * dr / segment_length)
-								x = x1 + (length_so_far * dx / segment_length)
-								y = y1 + (length_so_far * dy / segment_length)
-								z = z1 + (length_so_far * dz / segment_length)
-							# Tweak stiffness of the last metaball in the segment
-							if tweak_le:
-								ele.stiffness = 0.6
+								length_so_far = 0
+								while length_so_far < segment_length:
+									# Make a sphere at this point
+									ele = mball.elements.new()
+									ele.radius = r
+									ele.co = (x, y, z)
+									if (length_so_far == 0) and tweak_le:
+										ele.stiffness = 1
+									# Move x, y, z, and r to the next point
+									length_so_far += r/2
+									r = r1 + (length_so_far * dr / segment_length)
+									x = x1 + (length_so_far * dx / segment_length)
+									y = y1 + (length_so_far * dy / segment_length)
+									z = z1 + (length_so_far * dz / segment_length)
+								# Tweak stiffness of the last metaball in the segment
+								if tweak_le:
+									ele.stiffness = 0.6
+							lc = c
+
+					else:
+						print ( "=== Building Branch " + str(seg_num) + " ===" )
+						seg_num += 1
+						# print("HERE!!!")
+						for c in seg:
+							# print(seg)
+							# print(lc)
+							if (lc != None):  # and (seg_num < 20):
+
+								print ( "Building segment with radius of " + str(lc[4]) + " and " + str(c[4]) )
+
+								x1 = float(lc[1]) * self.scale_file_data
+								y1 = float(lc[2]) * self.scale_file_data
+								z1 = float(lc[3]) * self.scale_file_data
+								r1 = float(lc[4]) * self.scale_file_data
+								x2 = float(c[1]) * self.scale_file_data
+								y2 = float(c[2]) * self.scale_file_data
+								z2 = float(c[3]) * self.scale_file_data
+								r2 = float(c[4]) * self.scale_file_data
+
+								# Make the segment from a series of meta balls
+
+								segment_vector = mathutils.Vector ( ( (x2-x1), (y2-y1), (z2-z1) ) )
+								segment_length = segment_vector.length
+
+								# Be sure that the radiuses are non-zero
+								if segment_length < 0:
+									segment_length = 0.01
+								if r1 < segment_length / 1000:
+									r1 = segment_length / 1000
+								if r2 < segment_length / 1000:
+									r2 = segment_length / 1000
+
+								if r1 < self.min_forced_radius:
+									r1 = self.min_forced_radius
+								if r2 < self.min_forced_radius:
+									r2 = self.min_forced_radius
+
+								dr = r2 - r1
+								dx = x2 - x1
+								dy = y2 - y1
+								dz = z2 - z1
+
+								r = r1
+								x = x1
+								y = y1
+								z = z1
+
+								length_so_far = 0
+								while length_so_far < segment_length:
+									# Make a sphere at this point
+									ele = mball.elements.new()
+									ele.radius = r
+									ele.co = (x, y, z)
+									if (length_so_far == 0) and tweak_le:
+										ele.stiffness = 1
+									# Move x, y, z, and r to the next point
+									length_so_far += r/2
+									r = r1 + (length_so_far * dr / segment_length)
+									x = x1 + (length_so_far * dx / segment_length)
+									y = y1 + (length_so_far * dy / segment_length)
+									z = z1 + (length_so_far * dz / segment_length)
+								# Tweak stiffness of the last metaball in the segment
+								if tweak_le:
+									ele.stiffness = 0.6
 
 							# Make the last one just to be sure
 
@@ -2213,9 +2316,9 @@ class MakeNeuronMetaPropGroup(bpy.types.PropertyGroup):
 							#ele.co = (x2, y2, z2)
 
 							# obj_name = self.add_segment ( obj_name, p1=mathutils.Vector((x1,y1,z1)), p2=mathutils.Vector((x2,y2,z2)), r1=r1, r2=r2, faces=10, cap1=cap1, cap2=True )
-						lc = c
+							lc = c
 		else:		
-				__import__('code').interact(local={k: v for ns in (globals(), locals()) for k, v in ns.items()})
+				#__import__('code').interact(local={k: v for ns in (globals(), locals()) for k, v in ns.items()})
 				seg_num = 1
 				obj_name = None
 				for seg in segments:
