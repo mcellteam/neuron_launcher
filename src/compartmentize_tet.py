@@ -771,13 +771,13 @@ def f_compartmentize_tet(context, swc_filepath, n_seg_plen):
         sec_name = sec.name
         
         # Check that it is a section
-        if len(sec_name) == 8 and sec_name[0:3] == 'sc_':
+        if len(sec_name) == 12 and sec_name[0:3] == 'sc_':
             
             print("Section: " + str(sec_name))
 
             # Get the vert indeces
-            pt1 = int(sec_name[3:5])
-            pt2 = int(sec_name[6:8])
+            pt1 = int(sec_name[3:7])
+            pt2 = int(sec_name[8:12])
             pt_min = min(pt1,pt2)
             pt_max = max(pt1,pt2)
             
@@ -823,6 +823,7 @@ def f_compartmentize_tet(context, swc_filepath, n_seg_plen):
     for this_sc_id in mn_section_dict.keys():
         this_sc = mn_section_dict[this_sc_id]
         
+        #__import__('code').interact(local={k: v for ns in (globals(), locals()) for k, v in ns.items()})
         # Border
         this_sc_edge = sc_edge_dict[this_sc_id]
         

@@ -204,7 +204,10 @@ def get_connections(fname):
 			swc_data.append(line_data)
 
 	# VERY IMPORTANT: DETERMINE HOW MANY ZEROS THERE ARE => ZERO PADDING
-	zero_pad = len(str(len(swc_data)))
+
+	#zero_pad = len(str(len(swc_data)))
+	# I have changed this to a constant number for now
+	zero_pad = 4
 	zero_cmmnd = "%0"+ str(zero_pad) +"d"
 	sc_name_length = 4 + (2*zero_pad)
 	sg_name_length = sc_name_length + 7
