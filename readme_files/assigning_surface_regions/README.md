@@ -14,7 +14,7 @@ The output of the function is that:
 
 ![Surface Regions](../figures/assigning_surface_regions_2.jpg?raw=true "Surface Regions")
 
-Many problems may occur as a result of poor assignments. In particular, the most devistating is if two faces border each-other from different sections, but these sections are not neighbors in the SWC file (i.e. in the cable model). This will be documented further later.
+Many problems may occur as a result of poor assignments. In particular, the most devastating is if two faces border each-other from different sections, but these sections are not neighbors in the SWC file (i.e. in the cable model). This will be documented further later.
 
 Two functions currently exist to monitor the quality of the assignments:
 * "Check bordering surface assignments" checks the above problem. Note: SLOW!
